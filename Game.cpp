@@ -193,7 +193,9 @@ void Game::CreateGeometry()
 	// - But just to see how it's done...
 	unsigned int indices[] = { 0, 1, 2 };
 
+	baseTriangle = std::make_shared<Mesh>(vertices, 3, indices, 3, device, context);
 
+	/*
 	// Create a VERTEX BUFFER
 	// - This holds the vertex data of triangles for a single object
 	// - This buffer is created on the GPU, which is where the data needs to
@@ -246,6 +248,7 @@ void Game::CreateGeometry()
 		// - Once we do this, we'll NEVER CHANGE THE BUFFER AGAIN
 		device->CreateBuffer(&ibd, &initialIndexData, indexBuffer.GetAddressOf());
 	}
+	*/
 }
 
 
@@ -287,6 +290,9 @@ void Game::Draw(float deltaTime, float totalTime)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 
+	baseTriangle->Draw();
+
+	/*
 	// DRAW geometry
 	// - These steps are generally repeated for EACH object you draw
 	// - Other Direct3D calls will also be necessary to do more complex things
@@ -312,6 +318,7 @@ void Game::Draw(float deltaTime, float totalTime)
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
 	}
+	*/
 
 	// Frame END
 	// - These should happen exactly ONCE PER FRAME
