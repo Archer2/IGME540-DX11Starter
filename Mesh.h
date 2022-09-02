@@ -6,6 +6,10 @@
 
 #include "Vertex.h"
 
+/// <summary>
+/// The Mesh class wraps drawing functionality (as well as Vertex and Index storage) into a self-contained data structure that
+/// can be used to scale with many different types of geometry.
+/// </summary>
 class Mesh
 {
 public:

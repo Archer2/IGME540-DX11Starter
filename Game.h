@@ -37,7 +37,7 @@ private:
 	//Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
 	
 	// Simple Mesh storage
-	std::shared_ptr<Mesh> baseTriangle;
+	std::vector<std::shared_ptr<Mesh>> geometry;
 	
 	// Shaders and shader-related constructs
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
