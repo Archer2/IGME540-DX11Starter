@@ -2,6 +2,7 @@
 #include "Vertex.h"
 #include "Input.h"
 #include "Helpers.h"
+#include "SharedStructs.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -81,6 +82,22 @@ void Game::Init()
 		//    these calls will need to happen multiple times per frame
 		context->VSSetShader(vertexShader.Get(), 0, 0);
 		context->PSSetShader(pixelShader.Get(), 0, 0);
+
+		// Set the Vertex Shader constant buffer
+		//	- The size of this buffer MUST align with a 16-byte boundary
+		UINT size = sizeof(VertexShaderConstantData);
+		//size = (size + 15) / 16 * 16;
+		size += 16 - size % 16; // Does the same as the above line - both have a divison operation, so neither is better?
+
+		// Set the buffer settings
+		D3D11_BUFFER_DESC cbDesc = {};
+		cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; // Type of buffer
+		cbDesc.ByteWidth = size; // Should be a multiple of 16
+		cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE; // CPU Writes but not Reads
+		cbDesc.Usage = D3D11_USAGE_DYNAMIC; // CPU Writes, GPU Reads - fairly often
+
+		// Create the buffer
+		device->CreateBuffer(&cbDesc, 0, vsConstantBuffer.GetAddressOf());
 	}
 }
 
@@ -258,6 +275,23 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Clear the depth buffer (resets per-pixel occlusion information)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
+
+	// Test VertexShader constant buffer with static data for all meshes
+	//	- TESTING CODE: REMOVE IN FUTURE
+	{
+		VertexShaderConstantData vsData;
+		vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Each value is 0-1. This one gives a nice blue highlight
+		vsData.c_sharedOffset = XMFLOAT3(0.f, -.3f, 0.f); // Everything is still in screen-space, so should be -1 <= val <= 1
+
+		// Set data to GPU
+		D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};
+		context->Map(vsConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedBuffer);
+		memcpy(mappedBuffer.pData, &vsData, sizeof(vsData));
+		context->Unmap(vsConstantBuffer.Get(), 0);
+
+		// Bind to Active
+		context->VSSetConstantBuffers(0, 1, vsConstantBuffer.GetAddressOf());
+	} // END Test Constant Buffer
 
 	// Draw all stored Meshes
 	for (std::shared_ptr<Mesh> mesh : geometry) 

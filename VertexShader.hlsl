@@ -31,6 +31,16 @@ struct VertexToPixel
 	float4 color			: COLOR;        // RGBA color
 };
 
+// Struct representing the constant data used by the vertex shader.
+//	- For now just a basic tinting color and vertex offset
+//	- Must match exactly to a struct in SharedStructs.h
+//		- If either changes the other must change
+cbuffer VertexConstantData : register(b0)
+{
+	float4 c_tintColor; // Color to tint the main color with
+	float3 c_sharedOffset; // Positional offset for all vertices
+};
+
 // --------------------------------------------------------
 // The entry point (main method) for our vertex shader
 // 
@@ -51,12 +61,12 @@ VertexToPixel main( VertexShaderInput input )
 	// - Each of these components is then automatically divided by the W component, 
 	//   which we're leaving at 1.0 for now (this is more useful when dealing with 
 	//   a perspective projection matrix, which we'll get to in the future).
-	output.screenPosition = float4(input.localPosition, 1.0f);
+	output.screenPosition = float4(input.localPosition + c_sharedOffset, 1.0f);
 
 	// Pass the color through 
 	// - The values will be interpolated per-pixel by the rasterizer
 	// - We don't need to alter it here, but we do need to send it to the pixel shader
-	output.color = input.color;
+	output.color = input.color * c_tintColor;
 
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)
