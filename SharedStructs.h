@@ -12,5 +12,5 @@
 struct VertexShaderConstantData
 {
 	DirectX::XMFLOAT4 c_tintColor;
-	DirectX::XMFLOAT3 c_sharedOffset;
+	DirectX::XMFLOAT4X4 c_worldTransform;
 };

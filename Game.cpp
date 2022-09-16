@@ -7,6 +7,7 @@
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
+#include <ctime> // For seeding C Random generator with current time
 
 // For the DirectX Math library
 using namespace DirectX;
@@ -56,11 +57,15 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
+	// Seed Standard Random Number generator
+	std::srand((unsigned int)std::time(0));
+
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
 	//  - You'll be expanding and/or replacing these later
 	LoadShaders();
 	CreateGeometry();
+	GenerateEntities();
 	
 	// Set initial graphics API state
 	//  - These settings persist until we change them
@@ -198,9 +203,9 @@ void Game::CreateGeometry()
 	//    since we're describing the triangle in terms of the window itself
 	Vertex vertices[] =
 	{
-		{ XMFLOAT3(+0.0f, +0.5f, +0.0f), red },
-		{ XMFLOAT3(+0.5f, -0.5f, +0.0f), blue },
-		{ XMFLOAT3(-0.5f, -0.5f, +0.0f), green },
+		{ XMFLOAT3(+0.0f, +0.2f, +0.0f), red },
+		{ XMFLOAT3(+0.2f, -0.2f, +0.0f), blue },
+		{ XMFLOAT3(-0.2f, -0.2f, +0.0f), green },
 	};
 
 	// Set up indices, which tell us which vertices to use and in which order
@@ -212,30 +217,54 @@ void Game::CreateGeometry()
 
 	geometry.push_back(std::make_shared<Mesh>(vertices, 3, indices, 3, device, context));
 
-	// Make a rectangle in the top-left corner above the triangle
+	// Make a rectangle. Centered on origin. Transforms handled legitimately
 	Vertex squareVertices[] =
 	{
-		{ XMFLOAT3(-0.8f, +0.8f, 0.0f), red },
-		{ XMFLOAT3(-0.4f, +0.8f, 0.0f), blue },
-		{ XMFLOAT3(-0.4f, +0.4f, 0.0f), green },
-		{ XMFLOAT3(-0.8f, +0.4f, 0.0f), blue }
+		{ XMFLOAT3(+0.2f, +0.2f, 0.0f), red },
+		{ XMFLOAT3(+0.2f, -0.2f, 0.0f), blue },
+		{ XMFLOAT3(-0.2f, -0.2f, 0.0f), green },
+		{ XMFLOAT3(-0.2f, +0.2f, 0.0f), blue }
 	};
 	unsigned int squareIndices[] = { 0, 1, 2, 0, 2, 3 };
 
 	geometry.push_back(std::make_shared<Mesh>(squareVertices, 4, squareIndices, 6, device, context));
 
-	// Make an hourglass in the top-right corner above the triangle
+	// Make an hourglass. Centered on origin. Transforms handled legitimately
 	Vertex hourVertices[] =
 	{
-		{ XMFLOAT3(+0.4f, +0.8f, 0.0f), red },
-		{ XMFLOAT3(+0.8f, +0.8f, 0.0f), green },
-		{ XMFLOAT3(+0.6f, +0.6f, 0.0f), blue },
-		{ XMFLOAT3(+0.8f, +0.4f, 0.0f), red },
-		{ XMFLOAT3(+0.4f, +0.4f, 0.0f), green }
+		{ XMFLOAT3(-0.2f, +0.2f, 0.0f), red },
+		{ XMFLOAT3(+0.2f, +0.2f, 0.0f), green },
+		{ XMFLOAT3(+0.0f, +0.0f, 0.0f), blue },
+		{ XMFLOAT3(+0.2f, -0.2f, 0.0f), red },
+		{ XMFLOAT3(-0.2f, -0.2f, 0.0f), green }
 	};
 	unsigned int hourIndices[] = { 0, 1, 2, 2, 3, 4 };
 	
 	geometry.push_back(std::make_shared<Mesh>(hourVertices, 5, hourIndices, 6, device, context));
+}
+
+// --------------------------------------------------------
+// Generate a bunch of Entities using our stored geometry
+//	- Entites all reference the same geometry
+//	- This is what is actually drawn
+// --------------------------------------------------------
+void Game::GenerateEntities()
+{
+	// Generate 5 entities with random meshes and transforms
+	for (int i = 0; i < 5; i++) {
+		std::shared_ptr<Mesh> desiredMesh = geometry[std::rand() % geometry.size()]; // Random geometry
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(desiredMesh);
+		
+		// Generate a random transform in 2D (still using normalized coordinates)
+		Transform* pEntityTransform = entity->GetTransform();
+		pEntityTransform->SetPosition(GenerateRandomFloat(-1.f, 1.f), GenerateRandomFloat(-1.f, 1.f), 0.f);
+		float singleScale = GenerateRandomFloat(.5f, 1.5f);
+		pEntityTransform->SetScale(singleScale, singleScale, 1.f);
+		pEntityTransform->SetRotation(GenerateRandomFloat(0.f, 2.f * XM_PI), 0.f, 0.f);
+
+		// Push Entity to Game storage
+		entities.push_back(entity);
+	}
 }
 
 // --------------------------------------------------------
@@ -257,6 +286,11 @@ void Game::Update(float deltaTime, float totalTime)
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();
+
+	// Update all entities with the deltaTime
+	for (std::shared_ptr<Entity> entity : entities) {
+		entity->Update(deltaTime);
+	}
 }
 
 // --------------------------------------------------------
@@ -276,27 +310,9 @@ void Game::Draw(float deltaTime, float totalTime)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 
-	// Test VertexShader constant buffer with static data for all meshes
-	//	- TESTING CODE: REMOVE IN FUTURE
-	{
-		VertexShaderConstantData vsData;
-		vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Each value is 0-1. This one gives a nice blue highlight
-		vsData.c_sharedOffset = XMFLOAT3(0.f, -.3f, 0.f); // Everything is still in screen-space, so should be -1 <= val <= 1
-
-		// Set data to GPU
-		D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};
-		context->Map(vsConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedBuffer);
-		memcpy(mappedBuffer.pData, &vsData, sizeof(vsData));
-		context->Unmap(vsConstantBuffer.Get(), 0);
-
-		// Bind to Active
-		context->VSSetConstantBuffers(0, 1, vsConstantBuffer.GetAddressOf());
-	} // END Test Constant Buffer
-
-	// Draw all stored Meshes
-	for (std::shared_ptr<Mesh> mesh : geometry) 
-	{
-		mesh->Draw();
+	// Draw all stored Entities
+	for (std::shared_ptr<Entity> entity : entities) {
+		entity->Draw(context, vsConstantBuffer);
 	}
 
 	// Frame END

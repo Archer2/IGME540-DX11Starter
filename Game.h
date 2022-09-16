@@ -2,6 +2,8 @@
 
 #include "DXCore.h"
 #include "Mesh.h"
+#include "Entity.h"
+
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
 #include <memory>
@@ -26,6 +28,7 @@ private:
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
 	void LoadShaders(); 
 	void CreateGeometry();
+	void GenerateEntities();
 
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
@@ -38,6 +41,7 @@ private:
 	
 	// Simple Mesh storage
 	std::vector<std::shared_ptr<Mesh>> geometry;
+	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, and because they probably shouldn't be stack vars
 	
 	// Shaders and shader-related constructs
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
