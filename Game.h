@@ -3,6 +3,7 @@
 #include "DXCore.h"
 #include "Mesh.h"
 #include "Entity.h"
+#include "Camera.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
@@ -42,6 +43,9 @@ private:
 	// Simple Mesh storage
 	std::vector<std::shared_ptr<Mesh>> geometry;
 	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, and because they probably shouldn't be stack vars
+
+	// Camera
+	std::shared_ptr<Camera> camera;
 	
 	// Shaders and shader-related constructs
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;

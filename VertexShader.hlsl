@@ -32,13 +32,14 @@ struct VertexToPixel
 };
 
 // Struct representing the constant data used by the vertex shader.
-//	- For now just a basic tinting color and world transform
 //	- Must match exactly to a struct in SharedStructs.h
 //		- If either changes the other must change
 cbuffer VertexConstantData : register(b0)
 {
 	float4 c_tintColor; // Color to tint the main color with
 	matrix c_worldTransform; // World Transform for the object
+	matrix c_viewMatrix; // View Matrix of the currently active Camera
+	matrix c_projectionMatrix; // Projection Matrix of the currently active Camera
 };
 
 // --------------------------------------------------------
@@ -58,10 +59,9 @@ VertexToPixel main( VertexShaderInput input )
 	// - To be considered within the bounds of the screen, the X and Y components 
 	//   must be between -1 and 1.  
 	// - The Z component must be between 0 and 1.  
-	// - Each of these components is then automatically divided by the W component, 
-	//   which we're leaving at 1.0 for now (this is more useful when dealing with 
-	//   a perspective projection matrix, which we'll get to in the future).
-	output.screenPosition = mul(c_worldTransform, float4(input.localPosition, 1.0f));
+	// - Each of these components is then automatically divided by the W component
+	matrix wvp = mul(c_projectionMatrix, mul(c_viewMatrix, c_worldTransform));
+	output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 
 	// Pass the color through 
 	// - The values will be interpolated per-pixel by the rasterizer

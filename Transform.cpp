@@ -15,6 +15,9 @@ const Matrix4 Transform::IdentityMatrix4 = Matrix4(
 	0.f, 1.f, 0.f, 0.f, 
 	0.f, 0.f, 1.f, 0.f, 
 	0.f, 0.f, 0.f, 1.f);
+const Vector3 Transform::WorldForwardVector = Vector3(0.f, 0.f, 1.f);
+const Vector3 Transform::WorldRightwardVector = Vector3(1.f, 0.f, 0.f);
+const Vector3 Transform::WorldUpwardVector = Vector3(0.f, 1.f, 0.f);
 
 /************************* Public Transform Methods ***************************/
 
@@ -26,9 +29,13 @@ Transform::Transform()
 	: m_absolutePosition(ZeroVector3)
 	, m_absoluteScale(OneVector3)
 	, m_absoluteRotation(IdentityQuaternion)
+	, m_forwardVector(WorldForwardVector)
+	, m_rightVector(WorldRightwardVector)
+	, m_upVector(WorldUpwardVector)
 	, m_worldTransform(IdentityMatrix4)
 	, m_worldTransformInverseTranspose(IdentityMatrix4)
 	, m_bTransformDirty(false)
+	, m_bDirectionsDirty(false)
 {
 	//XMStoreFloat4x4(&m_worldTransform, XMMatrixIdentity());
 	//XMStoreFloat4x4(&m_worldTransformInverseTranspose, XMMatrixIdentity());
@@ -46,7 +53,7 @@ Transform::~Transform()
 //-----------------------------------------------
 // Completely resets the Position
 //-----------------------------------------------
-void Transform::SetPosition(Vector3 a_newPosition)
+void Transform::SetAbsolutePosition(Vector3 a_newPosition)
 {
 	m_absolutePosition = a_newPosition;
 	m_bTransformDirty = true;
@@ -55,7 +62,7 @@ void Transform::SetPosition(Vector3 a_newPosition)
 //-----------------------------------------------
 // Completely resets the Position
 //-----------------------------------------------
-void Transform::SetPosition(float x, float y, float z)
+void Transform::SetAbsolutePosition(float x, float y, float z)
 {
 	m_absolutePosition = XMFLOAT3(x, y, z);
 	m_bTransformDirty = true;
@@ -64,7 +71,7 @@ void Transform::SetPosition(float x, float y, float z)
 //-----------------------------------------------
 // Completely resets the Scale
 //-----------------------------------------------
-void Transform::SetScale(Vector3 a_newScale)
+void Transform::SetAbsoluteScale(Vector3 a_newScale)
 {
 	m_absoluteScale = a_newScale;
 	m_bTransformDirty = true;
@@ -73,7 +80,7 @@ void Transform::SetScale(Vector3 a_newScale)
 //-----------------------------------------------
 // Completely resets the Scale
 //-----------------------------------------------
-void Transform::SetScale(float x, float y, float z)
+void Transform::SetAbsoluteScale(float x, float y, float z)
 {
 	m_absoluteScale = XMFLOAT3(x, y, z);
 	m_bTransformDirty = true;
@@ -82,19 +89,21 @@ void Transform::SetScale(float x, float y, float z)
 //-----------------------------------------------
 // Completely resets the Rotation
 //-----------------------------------------------
-void Transform::SetRotation(Quaternion a_newRotation)
+void Transform::SetAbsoluteRotation(Quaternion a_newRotation)
 {
 	m_absoluteRotation = a_newRotation;
 	m_bTransformDirty = true;
+	m_bDirectionsDirty = true;
 }
 
 //-----------------------------------------------
 // Completely resets the Rotation
 //-----------------------------------------------
-void Transform::SetRotation(float roll, float pitch, float yaw)
+void Transform::SetAbsoluteRotation(float roll, float pitch, float yaw)
 {
 	XMStoreFloat4(&m_absoluteRotation, XMQuaternionRotationRollPitchYaw(pitch, yaw, roll));
 	m_bTransformDirty = true;
+	m_bDirectionsDirty = true;
 }
 
 //-----------------------------------------------
@@ -177,6 +186,7 @@ void Transform::AddAbsoluteRotation(Quaternion a_addRotation)
 {
 	XMStoreFloat4(&m_absoluteRotation, XMQuaternionMultiply(XMLoadFloat4(&m_absoluteRotation), XMLoadFloat4(&a_addRotation)));
 	m_bTransformDirty = true;
+	m_bDirectionsDirty = true;
 }
 
 //-----------------------------------------------
@@ -186,6 +196,7 @@ void Transform::AddAbsoluteRotation(XMVECTOR a_addRotationQuaternion)
 {
 	XMStoreFloat4(&m_absoluteRotation, XMQuaternionMultiply(XMLoadFloat4(&m_absoluteRotation), a_addRotationQuaternion));
 	m_bTransformDirty = true;
+	m_bDirectionsDirty = true;
 }
 
 //-----------------------------------------------
@@ -194,6 +205,41 @@ void Transform::AddAbsoluteRotation(XMVECTOR a_addRotationQuaternion)
 void Transform::AddAbsoluteRotation(float roll, float pitch, float yaw)
 {
 	XMStoreFloat4(&m_absoluteRotation, XMQuaternionMultiply(XMLoadFloat4(&m_absoluteRotation), XMQuaternionRotationRollPitchYaw(pitch, yaw, roll)));
+	m_bTransformDirty = true;
+	m_bDirectionsDirty = true;
+}
+
+//-----------------------------------------------
+// Moves the Transform by the given vector along
+// its current Orientation
+//-----------------------------------------------
+void Transform::Move(Vector3 a_addMovement)
+{
+	XMVECTOR addMovement = XMVector3Rotate(XMLoadFloat3(&a_addMovement), XMLoadFloat4(&m_absoluteRotation));
+	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), addMovement));
+	m_bTransformDirty = true;
+}
+
+//-----------------------------------------------
+// Moves the Transform by the given vector along
+// its current Orientation
+//-----------------------------------------------
+void Transform::Move(DirectX::XMVECTOR a_addMovement)
+{
+	a_addMovement = XMVector3Rotate(a_addMovement, XMLoadFloat4(&m_absoluteRotation));
+	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), a_addMovement));
+	m_bTransformDirty = true;
+}
+
+//-----------------------------------------------
+// Moves the Transform by the given values along
+// its current Orientation
+//-----------------------------------------------
+void Transform::Move(float x, float y, float z)
+{
+	Vector3 addMovementVector(x, y, z);
+	XMVECTOR addMovement = XMVector3Rotate(XMLoadFloat3(&addMovementVector), XMLoadFloat4(&m_absoluteRotation));
+	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), addMovement));
 	m_bTransformDirty = true;
 }
 
@@ -244,6 +290,24 @@ Quaternion Transform::GetRotation()
 	return m_absoluteRotation;
 }
 
+Vector3 Transform::GetForward()
+{
+	UpdateVectors();
+	return m_forwardVector;
+}
+
+Vector3 Transform::GetRightward()
+{
+	UpdateVectors();
+	return m_rightVector;
+}
+
+Vector3 Transform::GetUpward()
+{
+	UpdateVectors();
+	return m_upVector;
+}
+
 //-----------------------------------------------
 // Checks if this Transform has changed in any way
 //-----------------------------------------------
@@ -275,5 +339,17 @@ inline void Transform::UpdateMatrices()
 		XMStoreFloat4x4(&m_worldTransformInverseTranspose, XMMatrixInverse(nullptr, XMMatrixTranspose(worldTransform)));
 
 		m_bTransformDirty = false;
+	}
+}
+
+inline void Transform::UpdateVectors()
+{
+	if (m_bDirectionsDirty) 
+	{
+		XMStoreFloat3(&m_forwardVector, XMVector3Rotate(XMLoadFloat3(&WorldForwardVector), XMLoadFloat4(&m_absoluteRotation)));
+		XMStoreFloat3(&m_rightVector, XMVector3Rotate(XMLoadFloat3(&WorldRightwardVector), XMLoadFloat4(&m_absoluteRotation)));
+		XMStoreFloat3(&m_upVector, XMVector3Rotate(XMLoadFloat3(&WorldUpwardVector), XMLoadFloat4(&m_absoluteRotation)));
+
+		m_bDirectionsDirty = false;
 	}
 }

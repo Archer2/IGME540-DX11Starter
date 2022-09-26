@@ -6,6 +6,7 @@
 
 #include "Transform.h"
 #include "Mesh.h"
+#include "Camera.h"
 
 //-------------------------------------------------------
 // An Entity is a basic "renderable" object. The basic
@@ -23,7 +24,7 @@ public:
 
 	// Core Functions
 	void Update(float deltaTime);
-	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Microsoft::WRL::ComPtr<ID3D11Buffer> a_vsConstantBuffer);
+	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Microsoft::WRL::ComPtr<ID3D11Buffer> a_vsConstantBuffer, std::shared_ptr<Camera> a_mainCamera);
 
 	// Setters (The internal Mesh is not intended to be reset at this time)
 	void SetTransform(Transform a_newTransform);

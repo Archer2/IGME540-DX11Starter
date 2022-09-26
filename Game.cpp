@@ -66,6 +66,11 @@ void Game::Init()
 	LoadShaders();
 	CreateGeometry();
 	GenerateEntities();
+
+	// Create Camera some units behind the origin
+	Transform cameraTransform = Transform::ZeroTransform;
+	cameraTransform.SetAbsolutePosition(0.f, 0.f, -5.f);
+	camera = std::make_shared<Camera>(cameraTransform, XMFLOAT2(this->windowWidth, this->windowHeight));
 	
 	// Set initial graphics API state
 	//  - These settings persist until we change them
@@ -257,10 +262,10 @@ void Game::GenerateEntities()
 		
 		// Generate a random transform in 2D (still using normalized coordinates)
 		Transform* pEntityTransform = entity->GetTransform();
-		pEntityTransform->SetPosition(GenerateRandomFloat(-1.f, 1.f), GenerateRandomFloat(-1.f, 1.f), 0.f);
+		pEntityTransform->SetAbsolutePosition(GenerateRandomFloat(-1.f, 1.f), GenerateRandomFloat(-1.f, 1.f), 0.f);
 		float singleScale = GenerateRandomFloat(.5f, 1.5f);
-		pEntityTransform->SetScale(singleScale, singleScale, 1.f);
-		pEntityTransform->SetRotation(GenerateRandomFloat(0.f, 2.f * XM_PI), 0.f, 0.f);
+		pEntityTransform->SetAbsoluteScale(singleScale, singleScale, 1.f);
+		pEntityTransform->SetAbsoluteRotation(GenerateRandomFloat(0.f, 2.f * XM_PI), 0.f, 0.f);
 
 		// Push Entity to Game storage
 		entities.push_back(entity);
@@ -276,6 +281,11 @@ void Game::OnResize()
 {
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
+
+	// Resize Camera
+	if (camera != nullptr) {
+		camera->SetAspectRatio(XMFLOAT2(this->windowWidth, this->windowHeight));
+	}
 }
 
 // --------------------------------------------------------
@@ -290,6 +300,11 @@ void Game::Update(float deltaTime, float totalTime)
 	// Update all entities with the deltaTime
 	for (std::shared_ptr<Entity> entity : entities) {
 		entity->Update(deltaTime);
+	}
+
+	// Update Camera
+	if (camera != nullptr) {
+		camera->Update(deltaTime);
 	}
 }
 
@@ -312,7 +327,7 @@ void Game::Draw(float deltaTime, float totalTime)
 
 	// Draw all stored Entities
 	for (std::shared_ptr<Entity> entity : entities) {
-		entity->Draw(context, vsConstantBuffer);
+		entity->Draw(context, vsConstantBuffer, camera);
 	}
 
 	// Frame END

@@ -38,12 +38,14 @@ void Entity::Update(float deltaTime)
 // Handles DirectX calls for drawing this Entity
 //	- In future this may migrate to a unified Renderer
 //-----------------------------------------------
-void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Microsoft::WRL::ComPtr<ID3D11Buffer> a_vsConstantBuffer)
+void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Microsoft::WRL::ComPtr<ID3D11Buffer> a_vsConstantBuffer, std::shared_ptr<Camera> a_mainCamera)
 {
 	// Set Vertex Shader Const Data to correct values for this object
 	VertexShaderConstantData vsData = {};
 	vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Each value is 0-1. This one gives a nice blue highlight
 	vsData.c_worldTransform = m_transform.GetWorldTransformMatrix();
+	vsData.c_viewMatrix = a_mainCamera->GetViewMatrix();
+	vsData.c_projectionMatrix = a_mainCamera->GetProjectionMatrix();
 
 	// Set data to GPU
 	D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};

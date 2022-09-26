@@ -13,4 +13,6 @@ struct VertexShaderConstantData
 {
 	DirectX::XMFLOAT4 c_tintColor;
 	DirectX::XMFLOAT4X4 c_worldTransform;
+	DirectX::XMFLOAT4X4 c_viewMatrix;
+	DirectX::XMFLOAT4X4 c_projectionMatrix;
 };
