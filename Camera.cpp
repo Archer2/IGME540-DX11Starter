@@ -79,11 +79,11 @@ void Camera::SetProjectionType(ProjectionType a_projectionType)
 void Camera::AddCameraRotation(Vector3 a_rotationPitchYawRoll)
 {
 	m_rotationPitchYaw.x += a_rotationPitchYawRoll.x;
-	if (m_rotationPitchYaw.x > XM_PIDIV2) {
-		m_rotationPitchYaw.x = XM_PIDIV2;
+	if (m_rotationPitchYaw.x >= XM_PIDIV2) {
+		m_rotationPitchYaw.x = XM_PIDIV2 - 0.001f;
 	}
-	else if (m_rotationPitchYaw.x < -XM_PIDIV2) {
-		m_rotationPitchYaw.x = -XM_PIDIV2;
+	else if (m_rotationPitchYaw.x <= -XM_PIDIV2) {
+		m_rotationPitchYaw.x = -XM_PIDIV2 + 0.001f;
 	}
 	m_rotationPitchYaw.y += a_rotationPitchYawRoll.y;
 	// No roll for a_rotationPitchYawRoll.z
