@@ -91,4 +91,3 @@ protected:
 	inline void UpdateMatrices(); // inline if possible to boost performance (not forced since the function is longer)
 	inline void UpdateVectors(); // inline if possible to boost performance
 };
-

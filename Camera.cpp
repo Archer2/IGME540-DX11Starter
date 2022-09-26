@@ -3,7 +3,7 @@
 
 using namespace DirectX;
 
-Camera::Camera(Transform a_initialTransform, DirectX::XMFLOAT2 a_aspectRatio)
+Camera::Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio)
 	: m_transform(a_initialTransform)
 	, m_projectionType(ProjectionType::Perspective)
 	, m_fieldOfView(XM_PI / 3.f)
@@ -38,7 +38,7 @@ void Camera::UpdateViewMatrix()
 	}
 }
 
-void Camera::UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMFLOAT2 a_aspectRatio, float a_nearClipDistance, float a_farClipDistance)
+void Camera::UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMINT2 a_aspectRatio, float a_nearClipDistance, float a_farClipDistance)
 {
 	m_fieldOfView = a_fieldOfView;
 	m_aspectRatio = a_aspectRatio;
@@ -53,7 +53,7 @@ void Camera::SetFieldOfView(float a_newFOV)
 	UpdateProjectionMatrix(a_newFOV, m_aspectRatio, m_nearClipDistance, m_farClipDistance);
 }
 
-void Camera::SetAspectRatio(DirectX::XMFLOAT2 a_aspectRatio)
+void Camera::SetAspectRatio(DirectX::XMINT2 a_aspectRatio)
 {
 	UpdateProjectionMatrix(m_fieldOfView, a_aspectRatio, m_nearClipDistance, m_farClipDistance);
 }
@@ -103,9 +103,9 @@ DirectX::XMFLOAT4X4 Camera::CalculateProjectionMatrix()
 {
 	XMFLOAT4X4 projMatrix;
 	(m_projectionType == ProjectionType::Perspective) ?
-		XMStoreFloat4x4(&projMatrix, XMMatrixPerspectiveFovLH(m_fieldOfView, m_aspectRatio.x / m_aspectRatio.y, m_nearClipDistance, m_farClipDistance))
+		XMStoreFloat4x4(&projMatrix, XMMatrixPerspectiveFovLH(m_fieldOfView, (float)m_aspectRatio.x / (float)m_aspectRatio.y, m_nearClipDistance, m_farClipDistance))
 		:
-		XMStoreFloat4x4(&projMatrix, XMMatrixOrthographicLH(m_aspectRatio.x, m_aspectRatio.y, m_nearClipDistance, m_farClipDistance));
+		XMStoreFloat4x4(&projMatrix, XMMatrixOrthographicLH((float)m_aspectRatio.x, (float)m_aspectRatio.y, m_nearClipDistance, m_farClipDistance));
 	return projMatrix;
 }
 
@@ -139,9 +139,9 @@ void Camera::UpdateInput(float deltaTime)
 	m_transform.Move(movementVector);
 
 	if (input.MouseRightDown()) {
-		XMFLOAT2 rotation;
-		rotation.x = input.GetMouseXDelta();
-		rotation.y = input.GetMouseYDelta();
+		XMFLOAT2 rotation; // Normalization operation will likely change Int values into Floating Point
+		rotation.x = (float)input.GetMouseXDelta();
+		rotation.y = (float)input.GetMouseYDelta();
 		XMStoreFloat2(&rotation, XMVectorScale(XMVector2Normalize(XMLoadFloat2(&rotation)), m_lookAtSpeed * deltaTime));
 		m_transform.AddAbsoluteRotation(0.f, rotation.y, rotation.x);
 	}

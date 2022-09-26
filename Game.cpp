@@ -70,7 +70,7 @@ void Game::Init()
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
 	cameraTransform.SetAbsolutePosition(0.f, 0.f, -5.f);
-	camera = std::make_shared<Camera>(cameraTransform, XMFLOAT2(this->windowWidth, this->windowHeight));
+	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
 	
 	// Set initial graphics API state
 	//  - These settings persist until we change them
@@ -284,7 +284,7 @@ void Game::OnResize()
 
 	// Resize Camera
 	if (camera != nullptr) {
-		camera->SetAspectRatio(XMFLOAT2(this->windowWidth, this->windowHeight));
+		camera->SetAspectRatio(XMINT2(this->windowWidth, this->windowHeight));
 	}
 }
 

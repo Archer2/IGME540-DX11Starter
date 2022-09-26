@@ -11,16 +11,16 @@ public:
 		Orthographic = 1
 	};
 
-	Camera(Transform a_initialTransform, DirectX::XMFLOAT2 a_aspectRatio);
+	Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio);
 	~Camera();
 
 	void Update(float deltaTime);
 
 	void UpdateViewMatrix();
-	void UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMFLOAT2 a_aspectRatio, float a_nearClipDistance, float a_farClipDistance);
+	void UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMINT2 a_aspectRatio, float a_nearClipDistance, float a_farClipDistance);
 
 	void SetFieldOfView(float a_newFOV);
-	void SetAspectRatio(DirectX::XMFLOAT2 a_aspectRatio);
+	void SetAspectRatio(DirectX::XMINT2 a_aspectRatio);
 	void SetNearClipDistance(float a_newDistance);
 	void SetFarClipDistance(float a_newDistance);
 	void SetProjectionType(ProjectionType a_projectionType); // TODO: Make this also go through UpdateProjectionMatix()?
@@ -38,7 +38,7 @@ protected:
 	ProjectionType m_projectionType;
 
 	float m_fieldOfView; // Radian angle
-	DirectX::XMFLOAT2 m_aspectRatio;
+	DirectX::XMINT2 m_aspectRatio;
 	float m_nearClipDistance;
 	float m_farClipDistance;
 	
