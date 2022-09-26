@@ -28,6 +28,7 @@ const Vector3 Transform::WorldUpwardVector = Vector3(0.f, 1.f, 0.f);
 Transform::Transform()
 	: m_absolutePosition(ZeroVector3)
 	, m_absoluteScale(OneVector3)
+	, m_absoluteRotationRollPitchYaw(ZeroVector3)
 	, m_absoluteRotation(IdentityQuaternion)
 	, m_forwardVector(WorldForwardVector)
 	, m_rightVector(WorldRightwardVector)
@@ -216,8 +217,7 @@ void Transform::AddAbsoluteRotation(float roll, float pitch, float yaw)
 void Transform::Move(Vector3 a_addMovement)
 {
 	XMVECTOR addMovement = XMVector3Rotate(XMLoadFloat3(&a_addMovement), XMLoadFloat4(&m_absoluteRotation));
-	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), addMovement));
-	m_bTransformDirty = true;
+	AddAbsolutePosition(addMovement);
 }
 
 //-----------------------------------------------
@@ -227,8 +227,7 @@ void Transform::Move(Vector3 a_addMovement)
 void Transform::Move(DirectX::XMVECTOR a_addMovement)
 {
 	a_addMovement = XMVector3Rotate(a_addMovement, XMLoadFloat4(&m_absoluteRotation));
-	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), a_addMovement));
-	m_bTransformDirty = true;
+	AddAbsolutePosition(a_addMovement);
 }
 
 //-----------------------------------------------
@@ -239,8 +238,7 @@ void Transform::Move(float x, float y, float z)
 {
 	Vector3 addMovementVector(x, y, z);
 	XMVECTOR addMovement = XMVector3Rotate(XMLoadFloat3(&addMovementVector), XMLoadFloat4(&m_absoluteRotation));
-	XMStoreFloat3(&m_absolutePosition, XMVectorAdd(XMLoadFloat3(&m_absolutePosition), addMovement));
-	m_bTransformDirty = true;
+	AddAbsolutePosition(addMovement);
 }
 
 //-----------------------------------------------

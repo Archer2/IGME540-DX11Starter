@@ -1,6 +1,7 @@
 #pragma once
 
 #include <DirectXMath.h>
+
 #include "Transform.h"
 
 class Camera
@@ -25,6 +26,10 @@ public:
 	void SetFarClipDistance(float a_newDistance);
 	void SetProjectionType(ProjectionType a_projectionType); // TODO: Make this also go through UpdateProjectionMatix()?
 
+	// Camera rotation methods to handle manual Euler rotations - This should go through Transform eventually
+	void AddCameraRotation(Vector3 a_rotationPitchYawRoll);
+	void AddCameraRotation(float pitch, float yaw, float roll);
+
 	DirectX::XMFLOAT4X4 GetViewMatrix();
 	DirectX::XMFLOAT4X4 GetProjectionMatrix();
 	Transform* GetTransform();
@@ -42,6 +47,8 @@ protected:
 	float m_nearClipDistance;
 	float m_farClipDistance;
 	
+	DirectX::XMFLOAT2 m_rotationPitchYaw; // Pitch - x, Yaw = y. Placeholder to use Euler rotations, ignoring roll, since Quaternions from Transform add phantom Roll over time
+
 	float m_movementSpeed;
 	float m_lookAtSpeed;
 

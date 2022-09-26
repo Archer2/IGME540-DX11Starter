@@ -10,6 +10,7 @@ Camera::Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio)
 	, m_aspectRatio(a_aspectRatio)
 	, m_nearClipDistance(0.01f)
 	, m_farClipDistance(1000.f)
+	, m_rotationPitchYaw(0.f, 0.f)
 	, m_movementSpeed(2.f)
 	, m_lookAtSpeed(2.f)
 {
@@ -75,6 +76,24 @@ void Camera::SetProjectionType(ProjectionType a_projectionType)
 	m_projectionMatrix = CalculateProjectionMatrix();
 }
 
+void Camera::AddCameraRotation(Vector3 a_rotationPitchYawRoll)
+{
+	m_rotationPitchYaw.x += a_rotationPitchYawRoll.x;
+	if (m_rotationPitchYaw.x > XM_PIDIV2) {
+		m_rotationPitchYaw.x = XM_PIDIV2;
+	}
+	else if (m_rotationPitchYaw.x < -XM_PIDIV2) {
+		m_rotationPitchYaw.x = -XM_PIDIV2;
+	}
+	m_rotationPitchYaw.y += a_rotationPitchYawRoll.y;
+	// No roll for a_rotationPitchYawRoll.z
+}
+
+void Camera::AddCameraRotation(float pitch, float yaw, float roll)
+{
+	AddCameraRotation(Vector3(pitch, yaw, roll));
+}
+
 DirectX::XMFLOAT4X4 Camera::GetViewMatrix()
 {
 	return m_viewMatrix;
@@ -94,8 +113,8 @@ DirectX::XMFLOAT4X4 Camera::CalculateViewMatrix()
 {
 	XMFLOAT4X4 viewMatrix;
 	Vector3 position = m_transform.GetPosition();
-	Vector3 forward = m_transform.GetForward();
-	XMStoreFloat4x4(&viewMatrix, XMMatrixLookToLH(XMLoadFloat3(&position), XMLoadFloat3(&forward), XMLoadFloat3(&Transform::WorldUpwardVector)));
+	XMVECTOR forward = XMVector3Rotate(XMLoadFloat3(&Transform::WorldForwardVector), XMQuaternionRotationRollPitchYaw(m_rotationPitchYaw.x, m_rotationPitchYaw.y, 0.f));
+	XMStoreFloat4x4(&viewMatrix, XMMatrixLookToLH(XMLoadFloat3(&position), forward, XMLoadFloat3(&Transform::WorldUpwardVector)));
 	return viewMatrix;
 }
 
@@ -135,14 +154,17 @@ void Camera::UpdateInput(float deltaTime)
 	
 	// Normalize to length 1 (if not 0), then multiply to appropriate length
 	// Prevents multi-directional movement not maintaining speed
-	XMStoreFloat3(&movementVector, XMVectorScale(XMVector3Normalize(XMLoadFloat3(&movementVector)), m_movementSpeed * deltaTime));
-	m_transform.Move(movementVector);
+	XMVECTOR movement = XMVectorScale(XMVector3Normalize(XMLoadFloat3(&movementVector)), m_movementSpeed * deltaTime);
+	// Overwrite with custom camera Euler rotations ignoring Roll - Not always good to just ignore Roll
+	m_transform.AddAbsolutePosition(XMVector3Rotate(movement, XMQuaternionRotationRollPitchYaw(m_rotationPitchYaw.x, m_rotationPitchYaw.y, 0.f)));
+	//m_transform.Move(movement);
 
 	if (input.MouseRightDown()) {
 		XMFLOAT2 rotation; // Normalization operation will likely change Int values into Floating Point
 		rotation.x = (float)input.GetMouseXDelta();
 		rotation.y = (float)input.GetMouseYDelta();
 		XMStoreFloat2(&rotation, XMVectorScale(XMVector2Normalize(XMLoadFloat2(&rotation)), m_lookAtSpeed * deltaTime));
-		m_transform.AddAbsoluteRotation(0.f, rotation.y, rotation.x);
+		//m_transform.AddAbsoluteRotation(0.f, rotation.y, rotation.x);
+		AddCameraRotation(rotation.y, rotation.x, 0.f);
 	}
 }

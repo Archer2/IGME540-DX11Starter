@@ -76,6 +76,7 @@ public:
 protected:
 	Vector3 m_absolutePosition;
 	Vector3 m_absoluteScale;
+	Vector3 m_absoluteRotationRollPitchYaw; // Unused. TODO: Refactor to use this by default and calculate Quaternion when needed - Camera had issues with phantom Roll using just combined Quaternions
 	Quaternion m_absoluteRotation; // Quaternion - use XM...Quaternion() functions
 
 	Vector3 m_forwardVector;
