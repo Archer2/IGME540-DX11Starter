@@ -3,6 +3,9 @@
 
 using namespace DirectX;
 
+// ----------------------------------------------------------
+// Most basic constructor takes a Transform and Aspect Ratio
+// ----------------------------------------------------------
 Camera::Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio)
 	: m_transform(a_initialTransform)
 	, m_projectionType(ProjectionType::Perspective)
@@ -18,17 +21,26 @@ Camera::Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio)
 	m_projectionMatrix = CalculateProjectionMatrix();
 }
 
+// ----------------------------------------------------------
+// Destructor has no current required functionality
+// ----------------------------------------------------------
 Camera::~Camera()
 {
 	// Empty since there is no Heap data
 }
 
+// ----------------------------------------------------------
+// Handles any per-frame updating for the camera
+// ----------------------------------------------------------
 void Camera::Update(float deltaTime)
 {
 	UpdateInput(deltaTime); // Must happen before View Matrix is updated
 	UpdateViewMatrix(); // Happens every frame, important
 }
 
+// ----------------------------------------------------------
+// Updates the View Matrix if necessary
+// ----------------------------------------------------------
 void Camera::UpdateViewMatrix()
 {
 	// Only update if the Transform has changed. Since the world matrix for this Transform is never
@@ -39,6 +51,10 @@ void Camera::UpdateViewMatrix()
 	}
 }
 
+// ----------------------------------------------------------
+// Update the Projection Matrix, setting all input values
+//	- Called by all individual value Set functions
+// ----------------------------------------------------------
 void Camera::UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMINT2 a_aspectRatio, float a_nearClipDistance, float a_farClipDistance)
 {
 	m_fieldOfView = a_fieldOfView;
@@ -49,26 +65,41 @@ void Camera::UpdateProjectionMatrix(float a_fieldOfView, DirectX::XMINT2 a_aspec
 	m_projectionMatrix = CalculateProjectionMatrix();
 }
 
+// ----------------------------------------------------------
+// Sets the FOV and updates the Projection
+// ----------------------------------------------------------
 void Camera::SetFieldOfView(float a_newFOV)
 {
 	UpdateProjectionMatrix(a_newFOV, m_aspectRatio, m_nearClipDistance, m_farClipDistance);
 }
 
+// ----------------------------------------------------------
+// Sets the Aspect Ratio and updates the projection
+// ----------------------------------------------------------
 void Camera::SetAspectRatio(DirectX::XMINT2 a_aspectRatio)
 {
 	UpdateProjectionMatrix(m_fieldOfView, a_aspectRatio, m_nearClipDistance, m_farClipDistance);
 }
 
+// ----------------------------------------------------------
+// Sets the Near Clip Distance and updates the projection
+// ----------------------------------------------------------
 void Camera::SetNearClipDistance(float a_newDistance)
 {
 	UpdateProjectionMatrix(m_fieldOfView, m_aspectRatio, a_newDistance, m_farClipDistance);
 }
 
+// ----------------------------------------------------------
+// Sets the Far Clip Distance and updates the projection
+// ----------------------------------------------------------
 void Camera::SetFarClipDistance(float a_newDistance)
 {
 	UpdateProjectionMatrix(m_fieldOfView, m_aspectRatio, m_nearClipDistance, a_newDistance);
 }
 
+// ----------------------------------------------------------
+// Sets the projection Type and updates the projection
+// ----------------------------------------------------------
 void Camera::SetProjectionType(ProjectionType a_projectionType)
 {
 	// Does not utilize UpdateProjectionMatrix because that is ambiguous on the type of projection used (and no relevant values are being reset)
@@ -76,6 +107,26 @@ void Camera::SetProjectionType(ProjectionType a_projectionType)
 	m_projectionMatrix = CalculateProjectionMatrix();
 }
 
+// ----------------------------------------------------------
+// Sets the Camera's movement speed
+// ----------------------------------------------------------
+void Camera::SetMovementSpeed(float speed)
+{
+	m_movementSpeed = speed;
+}
+
+// ----------------------------------------------------------
+// Sets the Camera's rotation speed
+// ----------------------------------------------------------
+void Camera::SetLookAtSpeed(float speed)
+{
+	m_lookAtSpeed = speed;
+}
+
+// ----------------------------------------------------------
+// Adds Pitch and Yaw to the Camera's rotation in Euler angles
+//	- Roll is ignored
+// ----------------------------------------------------------
 void Camera::AddCameraRotation(Vector3 a_rotationPitchYawRoll)
 {
 	m_rotationPitchYaw.x += a_rotationPitchYawRoll.x;
@@ -89,26 +140,90 @@ void Camera::AddCameraRotation(Vector3 a_rotationPitchYawRoll)
 	// No roll for a_rotationPitchYawRoll.z
 }
 
+// ----------------------------------------------------------
+// Adds Pitch and Yaw to the Camera's rotation in Euler angles
+//	- Roll is ignored
+// ----------------------------------------------------------
 void Camera::AddCameraRotation(float pitch, float yaw, float roll)
 {
 	AddCameraRotation(Vector3(pitch, yaw, roll));
 }
 
+// ----------------------------------------------------------
+// Retrieves the Camera's Field of View
+// ----------------------------------------------------------
+float Camera::GetFieldOfView()
+{
+	return m_fieldOfView;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's Aspect Ratio
+// ----------------------------------------------------------
+DirectX::XMINT2 Camera::GetAspectRatio()
+{
+	return m_aspectRatio;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's Near Clip Distance
+// ----------------------------------------------------------
+float Camera::GetNearClipDistance()
+{
+	return m_nearClipDistance;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's Far Clip Distance
+// ----------------------------------------------------------
+float Camera::GetFarClipDistance()
+{
+	return m_farClipDistance;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's Movement Speed
+// ----------------------------------------------------------
+float Camera::GetMovementSpeed()
+{
+	return m_movementSpeed;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's Rotational speed
+// ----------------------------------------------------------
+float Camera::GetLookAtSpeed()
+{
+	return m_lookAtSpeed;
+}
+
+// ----------------------------------------------------------
+// Retrieves the Camera's View Matrix
+// ----------------------------------------------------------
 DirectX::XMFLOAT4X4 Camera::GetViewMatrix()
 {
 	return m_viewMatrix;
 }
 
+// ----------------------------------------------------------
+// Retrieves the Camera's Projection Matrix
+// ----------------------------------------------------------
 DirectX::XMFLOAT4X4 Camera::GetProjectionMatrix()
 {
 	return m_projectionMatrix;
 }
 
+// ----------------------------------------------------------
+// Retrieves the Camera's Transform as a pointer
+// ----------------------------------------------------------
 Transform* Camera::GetTransform()
 {
 	return &m_transform;
 }
 
+// ----------------------------------------------------------
+// Calculates the Camera's View Matrix
+// ----------------------------------------------------------
 DirectX::XMFLOAT4X4 Camera::CalculateViewMatrix()
 {
 	XMFLOAT4X4 viewMatrix;
@@ -118,6 +233,9 @@ DirectX::XMFLOAT4X4 Camera::CalculateViewMatrix()
 	return viewMatrix;
 }
 
+// ----------------------------------------------------------
+// Calculates the Camera's Projection Matrix
+// ----------------------------------------------------------
 DirectX::XMFLOAT4X4 Camera::CalculateProjectionMatrix()
 {
 	XMFLOAT4X4 projMatrix;
@@ -128,6 +246,9 @@ DirectX::XMFLOAT4X4 Camera::CalculateProjectionMatrix()
 	return projMatrix;
 }
 
+// ----------------------------------------------------------
+// Handles updating of input relevant to the Camera
+// ----------------------------------------------------------
 void Camera::UpdateInput(float deltaTime)
 {
 	Input& input = Input::GetInstance();

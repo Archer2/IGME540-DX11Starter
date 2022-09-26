@@ -288,18 +288,27 @@ Quaternion Transform::GetRotation()
 	return m_absoluteRotation;
 }
 
+//-----------------------------------------------
+// Retrives the Front direction of this Transform
+//-----------------------------------------------
 Vector3 Transform::GetForward()
 {
 	UpdateVectors();
 	return m_forwardVector;
 }
 
+//-----------------------------------------------
+// Retrives the Right direction of this Transform
+//-----------------------------------------------
 Vector3 Transform::GetRightward()
 {
 	UpdateVectors();
 	return m_rightVector;
 }
 
+//-----------------------------------------------
+// Retrives the Up direction of this Transform
+//-----------------------------------------------
 Vector3 Transform::GetUpward()
 {
 	UpdateVectors();
@@ -340,6 +349,10 @@ inline void Transform::UpdateMatrices()
 	}
 }
 
+//-----------------------------------------------
+// If the directions are dirty updates all directional
+// vectors
+//-----------------------------------------------
 inline void Transform::UpdateVectors()
 {
 	if (m_bDirectionsDirty) 

@@ -175,7 +175,7 @@ bool Input::KeyDown(int key)
 {
 	if (key < 0 || key > 255) return false;
 
-	return (kbState[key] & 0x80) != 0;
+	return (kbState[key] & 0x80) != 0 && !keyboardCaptured;
 }
 
 // ----------------------------------------------------------
@@ -189,7 +189,7 @@ bool Input::KeyUp(int key)
 {
 	if (key < 0 || key > 255) return false;
 
-	return !(kbState[key] & 0x80);
+	return !(kbState[key] & 0x80) && !keyboardCaptured;
 }
 
 // ----------------------------------------------------------
@@ -205,7 +205,8 @@ bool Input::KeyPress(int key)
 
 	return
 		kbState[key] & 0x80 &&			// Down now
-		!(prevKbState[key] & 0x80);		// Up last frame
+		!(prevKbState[key] & 0x80) && // Up last frame
+		!keyboardCaptured;
 }
 
 // ----------------------------------------------------------
@@ -221,7 +222,8 @@ bool Input::KeyRelease(int key)
 
 	return
 		!(kbState[key] & 0x80) &&	// Up now
-		prevKbState[key] & 0x80;	// Down last frame
+		prevKbState[key] & 0x80 &&	// Down last frame
+		!keyboardCaptured;
 }
 
 
@@ -257,28 +259,62 @@ bool Input::GetKeyArray(bool* keyArray, int size)
 // ----------------------------------------------------------
 //  Is the specific mouse button down this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftDown() { return (kbState[VK_LBUTTON] & 0x80) != 0; }
-bool Input::MouseRightDown() { return (kbState[VK_RBUTTON] & 0x80) != 0; }
-bool Input::MouseMiddleDown() { return (kbState[VK_MBUTTON] & 0x80) != 0; }
+bool Input::MouseLeftDown() { return (kbState[VK_LBUTTON] & 0x80) != 0 && !mouseCaptured; }
+bool Input::MouseRightDown() { return (kbState[VK_RBUTTON] & 0x80) != 0 && !mouseCaptured; }
+bool Input::MouseMiddleDown() { return (kbState[VK_MBUTTON] & 0x80) != 0 && !mouseCaptured; }
 
 
 // ----------------------------------------------------------
 //  Is the specific mouse button up this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftUp() { return !(kbState[VK_LBUTTON] & 0x80); }
-bool Input::MouseRightUp() { return !(kbState[VK_RBUTTON] & 0x80); }
-bool Input::MouseMiddleUp() { return !(kbState[VK_MBUTTON] & 0x80); }
+bool Input::MouseLeftUp() { return !(kbState[VK_LBUTTON] & 0x80) && !mouseCaptured; }
+bool Input::MouseRightUp() { return !(kbState[VK_RBUTTON] & 0x80) && !mouseCaptured; }
+bool Input::MouseMiddleUp() { return !(kbState[VK_MBUTTON] & 0x80) && !mouseCaptured; }
 
 
 // ----------------------------------------------------------
 //  Was the specific mouse button initially 
 // pressed or released this frame?
 // ----------------------------------------------------------
-bool Input::MouseLeftPress() { return kbState[VK_LBUTTON] & 0x80 && !(prevKbState[VK_LBUTTON] & 0x80); }
-bool Input::MouseLeftRelease() { return !(kbState[VK_LBUTTON] & 0x80) && prevKbState[VK_LBUTTON] & 0x80; }
+bool Input::MouseLeftPress() { return kbState[VK_LBUTTON] & 0x80 && !(prevKbState[VK_LBUTTON] & 0x80) && !mouseCaptured; }
+bool Input::MouseLeftRelease() { return !(kbState[VK_LBUTTON] & 0x80) && prevKbState[VK_LBUTTON] & 0x80 && !mouseCaptured; }
 
-bool Input::MouseRightPress() { return kbState[VK_RBUTTON] & 0x80 && !(prevKbState[VK_RBUTTON] & 0x80); }
-bool Input::MouseRightRelease() { return !(kbState[VK_RBUTTON] & 0x80) && prevKbState[VK_RBUTTON] & 0x80; }
+bool Input::MouseRightPress() { return kbState[VK_RBUTTON] & 0x80 && !(prevKbState[VK_RBUTTON] & 0x80) && !mouseCaptured; }
+bool Input::MouseRightRelease() { return !(kbState[VK_RBUTTON] & 0x80) && prevKbState[VK_RBUTTON] & 0x80 && !mouseCaptured; }
 
-bool Input::MouseMiddlePress() { return kbState[VK_MBUTTON] & 0x80 && !(prevKbState[VK_MBUTTON] & 0x80); }
-bool Input::MouseMiddleRelease() { return !(kbState[VK_MBUTTON] & 0x80) && prevKbState[VK_MBUTTON] & 0x80; }
+bool Input::MouseMiddlePress() { return kbState[VK_MBUTTON] & 0x80 && !(prevKbState[VK_MBUTTON] & 0x80) && !mouseCaptured; }
+bool Input::MouseMiddleRelease() { return !(kbState[VK_MBUTTON] & 0x80) && prevKbState[VK_MBUTTON] & 0x80 && !mouseCaptured; }
+
+// ----------------------------------------------------------
+// Sets the Keyboard Capture state to toggle input from the 
+// keyboard
+// ----------------------------------------------------------
+void Input::SetKeyboardCapture(bool capture)
+{
+	keyboardCaptured = capture;
+}
+
+// ----------------------------------------------------------
+// Is the Input set to capture Keyboard input?
+// ----------------------------------------------------------
+bool Input::GetKeyboardCapture()
+{
+	return keyboardCaptured;
+}
+
+// ----------------------------------------------------------
+// Sets the Mouse Capture state to toggle input from the 
+// mouse
+// ----------------------------------------------------------
+void Input::SetMouseCapture(bool capture)
+{
+	mouseCaptured = capture;
+}
+
+// ----------------------------------------------------------
+// Is the Input set to capture Mouse input?
+// ----------------------------------------------------------
+bool Input::GetMouseCapture()
+{
+	return mouseCaptured;
+}

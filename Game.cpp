@@ -4,6 +4,10 @@
 #include "Helpers.h"
 #include "SharedStructs.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx11.h"
+
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
@@ -49,6 +53,11 @@ Game::~Game()
 
 	// Call Release() on any Direct3D objects made within this class
 	// - Note: this is unnecessary for D3D objects stored in ComPtrs
+
+	// Clean up ImGUI
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }
 
 // --------------------------------------------------------
@@ -59,6 +68,13 @@ void Game::Init()
 {
 	// Seed Standard Random Number generator
 	std::srand((unsigned int)std::time(0));
+
+	// Set up ImGUI
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui_ImplWin32_Init(hWnd);
+	ImGui_ImplDX11_Init(device.Get(), context.Get());
+	ImGui::StyleColorsClassic(); // Or Dark or Light
 
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
@@ -273,6 +289,125 @@ void Game::GenerateEntities()
 }
 
 // --------------------------------------------------------
+// Update the input to the UI and draw UI windows
+// --------------------------------------------------------
+void Game::UpdateUI(float deltaTime)
+{
+	// Get a reference to the input manager
+	Input& input = Input::GetInstance();
+
+	// Avoid tainting input
+	input.SetKeyboardCapture(false);
+	input.SetMouseCapture(false);
+
+	// Send input to ImGUI
+	ImGuiIO& io = ImGui::GetIO();
+	io.DeltaTime = deltaTime;
+	io.DisplaySize.x = (float)this->windowWidth;
+	io.DisplaySize.y = (float)this->windowHeight;
+	io.KeyCtrl = input.KeyDown(VK_CONTROL);
+	io.KeyShift = input.KeyDown(VK_SHIFT);
+	io.KeyAlt = input.KeyDown(VK_MENU);
+	io.MousePos.x = (float)input.GetMouseX();
+	io.MousePos.y = (float)input.GetMouseY();
+	io.MouseDown[0] = input.MouseLeftDown();
+	io.MouseDown[1] = input.MouseRightDown();
+	io.MouseDown[2] = input.MouseMiddleDown();
+	io.MouseWheel = input.GetMouseWheel();
+	input.GetKeyArray(io.KeysDown, 256);
+
+	// Reset Frame
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	// Determine new capture status
+	input.SetKeyboardCapture(io.WantCaptureKeyboard);
+	input.SetMouseCapture(io.WantCaptureMouse);
+
+	// Show windows
+	//ImGui::ShowDemoWindow();
+	UIStatsWindow();
+	UIEditorWindow();
+}
+
+// --------------------------------------------------------
+// Generate a Stats window showing general application stats
+//	- these are the same as those shown on the titlebar
+// --------------------------------------------------------
+void Game::UIStatsWindow()
+{
+	ImGui::Begin("Stats");
+
+	// Version switch statement taken from DXCore::UpdateTitleBarStats()
+	std::string directXVersion = "Direct3D Version: ";
+	switch (dxFeatureLevel) {
+	case D3D_FEATURE_LEVEL_11_1: directXVersion += "D3D 11.1"; break;
+	case D3D_FEATURE_LEVEL_11_0: directXVersion += "D3D 11.0"; break;
+	case D3D_FEATURE_LEVEL_10_1: directXVersion += "D3D 10.1"; break;
+	case D3D_FEATURE_LEVEL_10_0: directXVersion += "D3D 10.0"; break;
+	case D3D_FEATURE_LEVEL_9_3:  directXVersion += "D3D 9.3";  break;
+	case D3D_FEATURE_LEVEL_9_2:  directXVersion += "D3D 9.2";  break;
+	case D3D_FEATURE_LEVEL_9_1:  directXVersion += "D3D 9.1";  break;
+	default:                     directXVersion += "D3D ???";  break;
+	}
+
+	ImGui::Text(directXVersion.c_str());
+	ImGui::Text("Window Width: %d", this->windowWidth);
+	ImGui::Text("Window Height: %d", this->windowHeight);
+	ImGui::Text("Window Aspect Ratio: %.3f", (float)this->windowWidth / (float)this->windowHeight);
+	ImGui::Text("FPS: %.3f", ImGui::GetIO().Framerate);
+	ImGui::Text("Frame Time (MS): %.3f", ImGui::GetIO().DeltaTime * 1000);
+
+	ImGui::End();
+}
+
+// --------------------------------------------------------
+// Generate a window from which the Camera's values can be
+// updated
+//	- original goal was to get a dropdown to edit various
+//	  Entities in the scene, but that caused assertion errors
+// --------------------------------------------------------
+void Game::UIEditorWindow()
+{
+	ImGui::Begin("Editor");
+
+	// Dropdown to select entity to edit, based off of DearImGUI documentation
+	// Not functioning
+	//static std::shared_ptr<Entity> selectedEntity = entities[0];
+	//static const char* selectedIndex = "1";
+	//if (ImGui::BeginCombo("Entity Selection", selectedIndex)) {
+	//	for (int i = 0; i < entities.size(); i++) {
+	//		bool bIsSelected = (entities[i] == selectedEntity);
+	//		if (ImGui::Selectable(std::to_string(i + 1).c_str(), bIsSelected)) {
+	//			selectedEntity = entities[i];
+	//			selectedIndex = std::to_string(i + 1).c_str();
+	//		}
+	//		if (bIsSelected) {
+	//			ImGui::SetItemDefaultFocus();
+	//		}
+	//	}
+	//	ImGui::EndCombo();
+	//}
+
+	// Edit Camera's values
+	float fov = camera->GetFieldOfView();
+	if (ImGui::SliderFloat("Camera Field Of View", &fov, XM_PIDIV4, XM_PIDIV4 * 3)) {
+		camera->SetFieldOfView(fov);
+	}
+	float moveSpeed = camera->GetMovementSpeed();
+	if (ImGui::SliderFloat("Camera Movement Speed", &moveSpeed, 0.f, 10.f)) {
+		camera->SetMovementSpeed(moveSpeed);
+	}
+	float rotSpeed = camera->GetLookAtSpeed();
+	if (ImGui::SliderFloat("Camera Rotation Speed", &rotSpeed, 0.f, 10.f)) {
+		camera->SetLookAtSpeed(rotSpeed);
+	}
+
+	ImGui::End();
+}
+
+// --------------------------------------------------------
 // Handle resizing to match the new window size.
 //  - DXCore needs to resize the back buffer
 //  - Eventually, we'll want to update our 3D camera
@@ -296,6 +431,9 @@ void Game::Update(float deltaTime, float totalTime)
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();
+
+	// Update UI immediately after checking to quit
+	UpdateUI(deltaTime);
 
 	// Update all entities with the deltaTime
 	for (std::shared_ptr<Entity> entity : entities) {
@@ -334,6 +472,10 @@ void Game::Draw(float deltaTime, float totalTime)
 	// - These should happen exactly ONCE PER FRAME
 	// - At the very end of the frame (after drawing *everything*)
 	{
+		// Draw ImGUI interface LAST
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
 		// Present the back buffer to the user
 		//  - Puts the results of what we've drawn onto the window
 		//  - Without this, the user never sees anything
