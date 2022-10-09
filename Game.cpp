@@ -140,7 +140,7 @@ void Game::GenerateEntities()
 		
 		// Generate a random transform in 2D (still using normalized coordinates)
 		Transform* pEntityTransform = entity->GetTransform();
-		pEntityTransform->SetAbsolutePosition(GenerateRandomFloat(-1.f, 1.f), GenerateRandomFloat(-1.f, 1.f), 0.f);
+		pEntityTransform->SetAbsolutePosition(GenerateRandomFloat(-5.f, 5.f), GenerateRandomFloat(-5.f, 5.f), 0.f);
 		//float singleScale = GenerateRandomFloat(.5f, 1.5f);
 		//pEntityTransform->SetAbsoluteScale(singleScale, singleScale, 1.f);
 		pEntityTransform->SetAbsoluteRotation(GenerateRandomFloat(0.f, 2.f * XM_PI), 0.f, 0.f);

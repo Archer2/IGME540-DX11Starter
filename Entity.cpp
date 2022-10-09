@@ -49,21 +49,24 @@ void Entity::Update(float deltaTime)
 void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera)
 {
 	std::shared_ptr<SimpleVertexShader> vertexShader = m_material->GetVertexShader();
+	std::shared_ptr<SimplePixelShader> pixelShader = m_material->GetPixelShader();
 
 	// Set material's shaders to Active on the GPU
 	vertexShader->SetShader();
-	m_material->GetPixelShader()->SetShader();
+	pixelShader->SetShader();
 
-	// Set Vertex Shader variables - names must match those in the VS cbuffer
-	vertexShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+	// Set Shader variables - names must match those in the shader cbuffers
 	vertexShader->SetMatrix4x4("c_worldTransform", m_transform.GetWorldTransformMatrix());
 	vertexShader->SetMatrix4x4("c_viewMatrix", a_mainCamera->GetViewMatrix());
 	vertexShader->SetMatrix4x4("c_projectionMatrix", a_mainCamera->GetProjectionMatrix());
 
+	pixelShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+
 	//vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Nice blue highlight tint relic
 
-	// Copy data to Active Shader
+	// Copy data to Active Shaders
 	vertexShader->CopyAllBufferData();
+	pixelShader->CopyAllBufferData();
 
 	m_mesh->Draw(); // Draws the Mesh with set data
 }

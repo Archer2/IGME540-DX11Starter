@@ -29,15 +29,13 @@ struct VertexToPixel
 	//  |    |                |
 	//  v    v                v
 	float4 screenPosition	: SV_POSITION;	// XYZW position (System Value Position)
-	float4 color			: COLOR;        // RGBA color
+	float3 normal			: NORMAL;       // RGBA color
+	float2 uv				: TEXCOORD;		// UV texture coordinate
 };
 
-// Struct representing the constant data used by the vertex shader.
-//	- Must match exactly to a struct in SharedStructs.h
-//		- If either changes the other must change
+// Struct representing the constant data used by the vertex shader
 cbuffer VertexConstantData : register(b0)
 {
-	float4 c_tintColor; // Color to tint the main color with
 	matrix c_worldTransform; // World Transform for the object
 	matrix c_viewMatrix; // View Matrix of the currently active Camera
 	matrix c_projectionMatrix; // Projection Matrix of the currently active Camera
@@ -64,10 +62,9 @@ VertexToPixel main( VertexShaderInput input )
 	matrix wvp = mul(c_projectionMatrix, mul(c_viewMatrix, c_worldTransform));
 	output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 
-	// Pass the color through 
-	// - The values will be interpolated per-pixel by the rasterizer
-	// - We don't need to alter it here, but we do need to send it to the pixel shader
-	output.color = float4(input.normal, 1.0f) * c_tintColor;
+	// Pass through the Normal and UV
+	output.normal = input.normal;
+	output.uv = input.uv;
 
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)
