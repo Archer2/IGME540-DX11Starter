@@ -153,6 +153,7 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="simpleshader\SimpleShader.cpp" />
     <ClCompile Include="Transform.cpp" />
@@ -172,10 +173,11 @@
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="SharedStructs.h" />
     <ClInclude Include="simpleshader\SimpleShader.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="Types.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>

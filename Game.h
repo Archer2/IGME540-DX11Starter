@@ -4,6 +4,9 @@
 #include "Mesh.h"
 #include "Entity.h"
 #include "Camera.h"
+#include "Material.h"
+
+#include "simpleshader/SimpleShader.h"
 
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
@@ -30,6 +33,7 @@ private:
 	void LoadShaders(); 
 	void CreateGeometry();
 	void GenerateEntities();
+	void CreateMaterials();
 
 	// Updating Helper methods
 	void UpdateUI(float deltaTime);
@@ -45,17 +49,16 @@ private:
 	//Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
 	//Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
 	
-	// Simple Mesh storage
+	// Core object storage
 	std::vector<std::shared_ptr<Mesh>> geometry;
 	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, and because they probably shouldn't be stack vars
+	std::vector<std::shared_ptr<Material>> materials;
 
 	// Camera
 	std::shared_ptr<Camera> camera;
 	
 	// Shaders and shader-related constructs
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
-	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> vsConstantBuffer;
+	std::shared_ptr<SimplePixelShader> pixelShader;
+	std::shared_ptr<SimpleVertexShader> vertexShader;
 };
 

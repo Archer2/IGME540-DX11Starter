@@ -1,16 +1,24 @@
 #include "Entity.h"
-#include "SharedStructs.h"
 
 using namespace DirectX;
 
 //-----------------------------------------------
 // Basic Constructor takes in a shared Mesh and
-// defaults to a Zero Transform
+// Material and defaults to a Zero Transform
 //-----------------------------------------------
-Entity::Entity(std::shared_ptr<Mesh> a_mesh)
+Entity::Entity(std::shared_ptr<Mesh> a_mesh, std::shared_ptr<Material> a_material)
+	: Entity(a_mesh, a_material, Transform::ZeroTransform)
+{
+}
+
+//-----------------------------------------------
+// Fully parameterized constructor
+//-----------------------------------------------
+Entity::Entity(std::shared_ptr<Mesh> a_mesh, std::shared_ptr<Material> a_material, Transform a_transform)
 	: m_timeSinceCreation(0.f)
 	, m_mesh(a_mesh)
-	, m_transform(Transform::ZeroTransform)
+	, m_material(a_material)
+	, m_transform(a_transform)
 {
 }
 
@@ -38,25 +46,26 @@ void Entity::Update(float deltaTime)
 // Handles DirectX calls for drawing this Entity
 //	- In future this may migrate to a unified Renderer
 //-----------------------------------------------
-void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Microsoft::WRL::ComPtr<ID3D11Buffer> a_vsConstantBuffer, std::shared_ptr<Camera> a_mainCamera)
+void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera)
 {
-	// Set Vertex Shader Const Data to correct values for this object
-	VertexShaderConstantData vsData = {};
-	vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Each value is 0-1. This one gives a nice blue highlight
-	vsData.c_worldTransform = m_transform.GetWorldTransformMatrix();
-	vsData.c_viewMatrix = a_mainCamera->GetViewMatrix();
-	vsData.c_projectionMatrix = a_mainCamera->GetProjectionMatrix();
+	std::shared_ptr<SimpleVertexShader> vertexShader = m_material->GetVertexShader();
 
-	// Set data to GPU
-	D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};
-	a_d3dContext->Map(a_vsConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedBuffer);
-	memcpy(mappedBuffer.pData, &vsData, sizeof(vsData));
-	a_d3dContext->Unmap(a_vsConstantBuffer.Get(), 0);
+	// Set material's shaders to Active on the GPU
+	vertexShader->SetShader();
+	m_material->GetPixelShader()->SetShader();
 
-	// Bind to Active
-	a_d3dContext->VSSetConstantBuffers(0, 1, a_vsConstantBuffer.GetAddressOf());
+	// Set Vertex Shader variables - names must match those in the VS cbuffer
+	vertexShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+	vertexShader->SetMatrix4x4("c_worldTransform", m_transform.GetWorldTransformMatrix());
+	vertexShader->SetMatrix4x4("c_viewMatrix", a_mainCamera->GetViewMatrix());
+	vertexShader->SetMatrix4x4("c_projectionMatrix", a_mainCamera->GetProjectionMatrix());
 
-	m_mesh->Draw(); // Draws the Mesh itself with set data
+	//vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Nice blue highlight tint relic
+
+	// Copy data to Active Shader
+	vertexShader->CopyAllBufferData();
+
+	m_mesh->Draw(); // Draws the Mesh with set data
 }
 
 //-----------------------------------------------
@@ -65,6 +74,14 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, Micr
 void Entity::SetTransform(Transform a_newTransform)
 {
 	m_transform = a_newTransform;
+}
+
+//-----------------------------------------------
+// Reset the Material used by this Entity
+//-----------------------------------------------
+void Entity::SetMaterial(std::shared_ptr<Material> a_material)
+{
+	m_material = a_material;
 }
 
 //-----------------------------------------------
@@ -82,4 +99,13 @@ Transform* Entity::GetTransform()
 std::shared_ptr<Mesh> Entity::GetMesh()
 {
 	return m_mesh;
+}
+
+//-----------------------------------------------
+// Returns a reference to the Material used by
+// this Entity
+//-----------------------------------------------
+std::shared_ptr<Material> Entity::GetMaterial()
+{
+	return m_material;
 }
