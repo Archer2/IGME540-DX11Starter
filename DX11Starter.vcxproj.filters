@@ -15,6 +15,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{d29e492f-adc5-442e-98aa-b28b2cb4ac5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Simple Shader">
+      <UniqueIdentifier>{e05e7d60-fc89-4491-9407-dc2b44b14c13}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DXCore.cpp">
@@ -64,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="simpleshader\SimpleShader.cpp">
+      <Filter>Simple Shader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -120,6 +126,9 @@
     </ClInclude>
     <ClInclude Include="imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="simpleshader\SimpleShader.h">
+      <Filter>Simple Shader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
