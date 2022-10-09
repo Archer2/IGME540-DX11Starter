@@ -23,7 +23,10 @@ public:
 
 private:
 	static Input* instance;
-	Input() {};
+	Input()
+	 : keyboardCaptured(false)
+	 , mouseCaptured(false)
+	{ };
 #pragma endregion
 
 public:

@@ -31,7 +31,7 @@ private:
 
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
 	void LoadShaders(); 
-	void CreateGeometry();
+	void LoadGeometry();
 	void GenerateEntities();
 	void CreateMaterials();
 

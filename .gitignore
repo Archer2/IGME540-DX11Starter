@@ -350,4 +350,4 @@ MigrationBackup/
 .ionide/
 
 # Include .obj 3D object format
-!meshes/*.obj
+!*/meshes/*.obj
