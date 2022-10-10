@@ -60,7 +60,11 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 	vertexShader->SetMatrix4x4("c_viewMatrix", a_mainCamera->GetViewMatrix());
 	vertexShader->SetMatrix4x4("c_projectionMatrix", a_mainCamera->GetProjectionMatrix());
 
-	pixelShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+	// Check for different Pixel Shader constant variables - TODO: This is not sustainable - cannot check every possible shader name
+	if (pixelShader->HasVariable("c_tintColor"))
+		pixelShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+	if (pixelShader->HasVariable("c_time"))
+		pixelShader->SetFloat("c_time", m_timeSinceCreation);
 
 	//vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Nice blue highlight tint relic
 

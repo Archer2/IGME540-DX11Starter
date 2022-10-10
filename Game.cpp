@@ -106,6 +106,7 @@ void Game::LoadShaders()
 {
 	vertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"VertexShader.cso").c_str());
 	pixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"PixelShader.cso").c_str());
+	customPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"ProceduralPixelShader.cso").c_str());
 }
 
 
@@ -132,10 +133,13 @@ void Game::LoadGeometry()
 // --------------------------------------------------------
 void Game::GenerateEntities()
 {
+	// Generate a fancy cube at the world origin
+	entities.push_back(std::make_shared<Entity>(geometry[1], materials[3]));
+
 	// Generate 5 entities with random meshes and transforms
 	for (int i = 0; i < 5; i++) {
 		std::shared_ptr<Mesh> desiredMesh = geometry[std::rand() % geometry.size()]; // Random geometry
-		std::shared_ptr<Material> desiredMat = materials[std::rand() % materials.size()]; // Random material
+		std::shared_ptr<Material> desiredMat = materials[std::rand() % (materials.size()-1)]; // Random material, ignoring the fancy ps
 		std::shared_ptr<Entity> entity = std::make_shared<Entity>(desiredMesh, desiredMat);
 		
 		// Generate a random transform in 2D (still using normalized coordinates)
@@ -159,6 +163,7 @@ void Game::CreateMaterials()
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 0.5f, 0.5f, 1.f))); // Red color tint
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 1.f, 0.5f, 1.f))); // Blue color tint
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 0.5f, 1.f, 1.f))); // Green color tint
+	materials.push_back(std::make_shared<Material>(vertexShader, customPixelShader));
 }
 
 // --------------------------------------------------------
