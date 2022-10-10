@@ -30,9 +30,10 @@ float4 main(VertexToPixel input) : SV_TARGET
 	input.uv.x = max(input.uv.x, 0) % 1;
 	input.uv.y = max(input.uv.y, 0) % 1;
 	
+	float gridSize = 3.f; // The goal is a 3x3 grid of colors
+
 	// Expand UV to be 0-3 instead of 0-1 (for the 3x3 grid)
 	// Repeat that expansion a given number of times
-	float gridSize = 3.f;
 	float iterations = 5.f; // This one could definitely be passed in as a constant, but that is not needed right now
 	float u = input.uv.x * gridSize * iterations;
 	float v = input.uv.y * gridSize * iterations;

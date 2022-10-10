@@ -33,6 +33,6 @@ struct VertexToPixel
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	input.normal = normalize(input.normal);
-	return float4(input.normal, 1.0f) * c_tintColor;
+	input.normal = normalize(input.normal); // placeholder for when lighting is implemented
+	return c_tintColor;
 }
