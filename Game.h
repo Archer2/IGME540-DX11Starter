@@ -5,6 +5,7 @@
 #include "Entity.h"
 #include "Camera.h"
 #include "Material.h"
+#include "Lights.h"
 
 #include "simpleshader/SimpleShader.h"
 
@@ -34,6 +35,7 @@ private:
 	void LoadGeometry();
 	void GenerateEntities();
 	void CreateMaterials();
+	void CreateLights();
 
 	// Updating Helper methods
 	void UpdateUI(float deltaTime);
@@ -51,8 +53,10 @@ private:
 	
 	// Core object storage
 	std::vector<std::shared_ptr<Mesh>> geometry;
-	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, and because they probably shouldn't be stack vars
+	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, safety, and stack avoidance
 	std::vector<std::shared_ptr<Material>> materials;
+	std::vector<BasicLight> directionalLights; // Pointer is really not needed for these structs, at least not now
+	std::vector<BasicLight> pointLights;
 
 	// Camera
 	std::shared_ptr<Camera> camera;

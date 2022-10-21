@@ -1,26 +1,22 @@
+#include "ShaderHelpers.hlsli"
+
+#define DIRECTIONAL_LIGHT_COUNT 3
+#define POINT_LIGHT_COUNT 2
 
 // Struct representing constant data shared between all pixels
 cbuffer PixelConstantData : register(b0)
 {
-	float4 c_tintColor; // Color to tint the main color with
+	float4 c_color; // Color to tint the main color with
+	float3 c_cameraPosition; // Position of the active Camera
+	float  c_roughness; // Inverse shininess of the object
 }
 
-// Struct representing the data we expect to receive from earlier pipeline stages
-// - Should match the output of our corresponding vertex shader
-// - The name of the struct itself is unimportant
-// - The variable names don't have to match other shaders (just the semantics)
-// - Each variable must have a semantic, which defines its usage
-struct VertexToPixel
+cbuffer PixelLightingData : register(b1)
 {
-	// Data type
-	//  |
-	//  |   Name          Semantic
-	//  |    |                |
-	//  v    v                v
-	float4 screenPosition	: SV_POSITION;
-	float3 normal			: NORMAL;
-	float2 uv				: TEXCOORD;
-};
+	float4 c_ambientLight; // Scene ambient color
+	Light c_directionalLights[DIRECTIONAL_LIGHT_COUNT]; // Sample directional lights
+	Light c_pointLights[POINT_LIGHT_COUNT]; // Sample point lights
+}
 
 // --------------------------------------------------------
 // The entry point (main method) for our pixel shader
@@ -33,6 +29,25 @@ struct VertexToPixel
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	input.normal = normalize(input.normal); // placeholder for when lighting is implemented
-	return c_tintColor;
+	// Re-normalize input normal
+	input.normal = normalize(input.normal);
+	
+	// Calculate Ambient Light
+	float4 ambientTerm = c_ambientLight * c_color;
+	
+	// Sum Directional Light calculations
+	float4 directionalLightSum = float4(0.f, 0.f, 0.f, 1.f);
+	for (int i = 0; i < DIRECTIONAL_LIGHT_COUNT; i++) {
+		directionalLightSum += CalculateDirectionalLightDiffuseAndSpecular(
+			c_directionalLights[i], input, c_cameraPosition, c_roughness, c_color);
+	}
+
+	// Sum Point Light calculations
+	float4 pointLightSum = float4(0.f, 0.f, 0.f, 1.f);
+	for (int j = 0; j < POINT_LIGHT_COUNT; j++) {
+		pointLightSum += CalculatePointLightDiffuseAndSpecular(
+			c_pointLights[j], input, c_cameraPosition, c_roughness, c_color);
+	}
+
+	return ambientTerm + directionalLightSum + pointLightSum;
 }

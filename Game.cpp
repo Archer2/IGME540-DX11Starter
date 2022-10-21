@@ -82,10 +82,11 @@ void Game::Init()
 	CreateMaterials();
 	LoadGeometry();
 	GenerateEntities();
+	CreateLights();
 
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
-	cameraTransform.SetAbsolutePosition(0.f, 0.f, -5.f);
+	cameraTransform.SetAbsolutePosition(0.f, 0.f, -15.f);
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
 
 	// Tell the input assembler (IA) stage of the pipeline what kind of
@@ -109,18 +110,16 @@ void Game::LoadShaders()
 	customPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"ProceduralPixelShader.cso").c_str());
 }
 
-
-
 // --------------------------------------------------------
 // Loads basic geometry files
 // --------------------------------------------------------
 void Game::LoadGeometry()
 {
 	// Load default files provided in A6
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
@@ -133,25 +132,24 @@ void Game::LoadGeometry()
 // --------------------------------------------------------
 void Game::GenerateEntities()
 {
-	// Generate a fancy cube at the world origin
-	entities.push_back(std::make_shared<Entity>(geometry[1], materials[3]));
+	// Generate a fancy cube just above world origin
+	entities.push_back(std::make_shared<Entity>(geometry[0], materials[1]));
+	entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
-	// Generate 5 entities with random meshes and transforms
-	for (int i = 0; i < 5; i++) {
-		std::shared_ptr<Mesh> desiredMesh = geometry[std::rand() % geometry.size()]; // Random geometry
-		std::shared_ptr<Material> desiredMat = materials[std::rand() % (materials.size()-1)]; // Random material, ignoring the fancy ps
-		std::shared_ptr<Entity> entity = std::make_shared<Entity>(desiredMesh, desiredMat);
-		
-		// Generate a random transform in 2D (still using normalized coordinates)
-		Transform* pEntityTransform = entity->GetTransform();
-		pEntityTransform->SetAbsolutePosition(GenerateRandomFloat(-5.f, 5.f), GenerateRandomFloat(-5.f, 5.f), 0.f);
-		//float singleScale = GenerateRandomFloat(.5f, 1.5f);
-		//pEntityTransform->SetAbsoluteScale(singleScale, singleScale, 1.f);
-		pEntityTransform->SetAbsoluteRotation(GenerateRandomFloat(0.f, 2.f * XM_PI), 0.f, 0.f);
+	// Generate a line of entities, 1 for each geometry
+	float entityOffset = 4.f; // Offset of each entity from its neighbors
+	float xPosition = geometry.size() * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
+	for (int i = 0; i < geometry.size(); i++) {
+		xPosition += entityOffset; // Increment position for the line
 
-		// Push Entity to Game storage
+		// Create and edit entity
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[0]);
+		entity->GetTransform()->SetAbsolutePosition(xPosition, -2.5f, 0.f); // Offset down so planes are visible from origin camera
 		entities.push_back(entity);
 	}
+
+	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
+	entities[1]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
 }
 
 // ----------------------------------------------------------
@@ -160,10 +158,59 @@ void Game::GenerateEntities()
 void Game::CreateMaterials()
 {
 	// Basic Pixel and Vertex Shaders
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 0.5f, 0.5f, 1.f))); // Red color tint
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 1.f, 0.5f, 1.f))); // Blue color tint
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 0.5f, 1.f, 1.f))); // Green color tint
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f)); // Basic white color tint
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 0.5f, 0.5f, 1.f))); // Red color tint
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 1.f, 0.5f, 1.f))); // Blue color tint
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 0.5f, 1.f, 1.f))); // Green color tint
 	materials.push_back(std::make_shared<Material>(vertexShader, customPixelShader));
+}
+
+// --------------------------------------------------------
+// Creates some basic lights using the BasicLight struct
+// --------------------------------------------------------
+void Game::CreateLights()
+{
+	// Blue light facing -X and +Y
+	BasicLight directionallight1 = {};
+	directionallight1.Type = LightType::Directional;
+	directionallight1.Direction = Vector3(-1.f, 1.f, 0.f);
+	directionallight1.Color = Vector3(.1f, .1f, 1.f);
+	directionallight1.Intensity = 1.f;
+	directionalLights.push_back(directionallight1);
+	
+	// Red light facing +X
+	BasicLight directionallight2 = {};
+	directionallight2.Type = LightType::Directional;
+	directionallight2.Direction = Vector3(1.f, 0.f, 0.f);
+	directionallight2.Color = Vector3(1.f, .1f, .1f);
+	directionallight2.Intensity = 1.f;
+	directionalLights.push_back(directionallight2);
+
+	// Green light facing -Y
+	BasicLight directionallight3 = {};
+	directionallight3.Type = LightType::Directional;
+	directionallight3.Direction = Vector3(0.f, -1.f, 0.f);
+	directionallight3.Color = Vector3(.1f, 1.f, .1f);
+	directionallight3.Intensity = 1.f;
+	directionalLights.push_back(directionallight3);
+
+	// White light to +X of the sphere
+	BasicLight pointLight1 = {};
+	pointLight1.Type = LightType::Directional;
+	pointLight1.Position = Vector3(2.f, -2.5f, 0.f);
+	pointLight1.Range = 10.f;
+	pointLight1.Color = Vector3(1.f, 1.f, 1.f);
+	pointLight1.Intensity = .7f;
+	pointLights.push_back(pointLight1);
+
+	// White light to -X of the sphere
+	BasicLight pointLight2 = {};
+	pointLight2.Type = LightType::Directional;
+	pointLight2.Position = Vector3(-2.f, -2.5f, 0.f);
+	pointLight2.Range = 10.f;
+	pointLight2.Color = Vector3(1.f, 1.f, 1.f);
+	pointLight2.Intensity = .7f;
+	pointLights.push_back(pointLight2);
 }
 
 // --------------------------------------------------------
@@ -282,6 +329,16 @@ void Game::UIEditorWindow()
 		camera->SetLookAtSpeed(rotSpeed);
 	}
 
+	// Edit Point Light positions
+	float pointLight1Pos[3] = { pointLights[0].Position.x, pointLights[0].Position.y, pointLights[0].Position.z };
+	if (ImGui::SliderFloat3("Point Light 1 Position", &pointLight1Pos[0], -10, 10)) {
+		pointLights[0].Position = Vector3(pointLight1Pos[0], pointLight1Pos[1], pointLight1Pos[2]);
+	}
+	float pointLight2Pos[3] = { pointLights[1].Position.x, pointLights[1].Position.y, pointLights[1].Position.z };
+	if (ImGui::SliderFloat3("Point Light 2 Position", &pointLight2Pos[0], -10, 10)) {
+		pointLights[1].Position = Vector3(pointLight2Pos[0], pointLight2Pos[1], pointLight2Pos[2]);
+	}
+
 	ImGui::End();
 }
 
@@ -329,6 +386,8 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
+	float sceneAmbientColor[4] = { 0.f, 0.f, 0.f, 1.f };
+
 	// Frame START
 	// - These things should happen ONCE PER FRAME
 	// - At the beginning of Game::Draw() before drawing *anything*
@@ -339,10 +398,28 @@ void Game::Draw(float deltaTime, float totalTime)
 
 		// Clear the depth buffer (resets per-pixel occlusion information)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		// Create a scene ambient color from the background color
+		for (int i = 0; i < 3; i++) {
+			sceneAmbientColor[i] = bgColor[i] / 3.5f; // Divisor works well for the Cornflower Blue background
+		}
 	}
 
 	// Draw all stored Entities
 	for (std::shared_ptr<Entity> entity : entities) {
+		std::shared_ptr<SimplePixelShader> pixelShader = entity->GetMaterial()->GetPixelShader();
+
+		// Set Ambient Lighting Data
+		if (pixelShader->HasVariable("c_ambientLight"))
+			pixelShader->SetFloat4("c_ambientLight", sceneAmbientColor);
+
+		// Set Light Data - Unsustainable for large numbers of lights - create 1+ arrays in Shader
+		if (pixelShader->HasVariable("c_directionalLights"))
+			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * (int)directionalLights.size());
+		if (pixelShader->HasVariable("c_pointLights"))
+			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * (int)pointLights.size());
+
+		// Draw Entity
 		entity->Draw(context, camera);
 	}
 

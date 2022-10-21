@@ -38,13 +38,16 @@ void Entity::Update(float deltaTime)
 {
 	m_timeSinceCreation += deltaTime;
 
-	// Some dummy code - all Entities rotate a little bit around Z
-	m_transform.AddAbsoluteRotation(XM_2PI * deltaTime / 5.f, 0.f, 0.f);
+	// Some dummy code - all Entities rotate a little bit around Y
+	m_transform.AddAbsoluteRotation(0.f, 0.f, XM_2PI * deltaTime / 8.f);
 }
 
 //-----------------------------------------------
 // Handles DirectX calls for drawing this Entity
 //	- In future this may migrate to a unified Renderer
+//  - Most of the heavy lifting of passing data to
+//    Shaders SHOULD be done through the Material,
+//    but it is easier to access the data here
 //-----------------------------------------------
 void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera)
 {
@@ -57,12 +60,17 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 
 	// Set Shader variables - names must match those in the shader cbuffers
 	vertexShader->SetMatrix4x4("c_worldTransform", m_transform.GetWorldTransformMatrix());
+	vertexShader->SetMatrix4x4("c_worldInvTranspose", m_transform.GetWorldTransformMatrixInverseTranspose());
 	vertexShader->SetMatrix4x4("c_viewMatrix", a_mainCamera->GetViewMatrix());
 	vertexShader->SetMatrix4x4("c_projectionMatrix", a_mainCamera->GetProjectionMatrix());
 
 	// Check for different Pixel Shader constant variables - TODO: This is not sustainable - cannot check every possible shader name
-	if (pixelShader->HasVariable("c_tintColor"))
-		pixelShader->SetFloat4("c_tintColor", m_material->GetColorTint());
+	if (pixelShader->HasVariable("c_color"))
+		pixelShader->SetFloat4("c_color", m_material->GetColorTint());
+	if (pixelShader->HasVariable("c_cameraPosition"))
+		pixelShader->SetFloat3("c_cameraPosition", a_mainCamera->GetTransform()->GetPosition());
+	if (pixelShader->HasVariable("c_roughness"))
+		pixelShader->SetFloat("c_roughness", m_material->GetRoughness());
 	if (pixelShader->HasVariable("c_time"))
 		pixelShader->SetFloat("c_time", m_timeSinceCreation);
 
@@ -72,6 +80,7 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 	vertexShader->CopyAllBufferData();
 	pixelShader->CopyAllBufferData();
 
+	// m_material->Prepare(); // <--- WHAT SHOULD HAPPEN ... but it would be too cumbersome to pass all the data to the Material
 	m_mesh->Draw(); // Draws the Mesh with set data
 }
 

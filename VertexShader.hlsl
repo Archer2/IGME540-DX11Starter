@@ -1,3 +1,4 @@
+#include "ShaderHelpers.hlsli"
 
 // Struct representing a single vertex worth of data
 // - This should match the vertex definition in our C++ code
@@ -16,27 +17,11 @@ struct VertexShaderInput
 	float2 uv				: TEXCOORD;		// UV texture coordinate
 };
 
-// Struct representing the data we're sending down the pipeline
-// - Should match our pixel shader's input (hence the name: Vertex to Pixel)
-// - At a minimum, we need a piece of data defined tagged as SV_POSITION
-// - The name of the struct itself is unimportant, but should be descriptive
-// - Each variable must have a semantic, which defines its usage
-struct VertexToPixel
-{
-	// Data type
-	//  |
-	//  |   Name          Semantic
-	//  |    |                |
-	//  v    v                v
-	float4 screenPosition	: SV_POSITION;	// XYZW position (System Value Position)
-	float3 normal			: NORMAL;       // RGBA color
-	float2 uv				: TEXCOORD;		// UV texture coordinate
-};
-
 // Struct representing the constant data used by the vertex shader
 cbuffer VertexConstantData : register(b0)
 {
 	matrix c_worldTransform; // World Transform for the object
+	matrix c_worldInvTranspose; // World Inverse Transpose Transfrom used for normal manipulation
 	matrix c_viewMatrix; // View Matrix of the currently active Camera
 	matrix c_projectionMatrix; // Projection Matrix of the currently active Camera
 };
@@ -62,9 +47,10 @@ VertexToPixel main( VertexShaderInput input )
 	matrix wvp = mul(c_projectionMatrix, mul(c_viewMatrix, c_worldTransform));
 	output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 
-	// Pass through the Normal and UV
-	output.normal = input.normal;
+	// Pass through the Normal, UV, and World Position
+	output.normal = mul((float3x3)c_worldInvTranspose, input.normal);
 	output.uv = input.uv;
+	output.worldPosition = mul(c_worldTransform, float4(input.localPosition, 1.0f)).xyz;
 
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)

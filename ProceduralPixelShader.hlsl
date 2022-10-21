@@ -1,18 +1,10 @@
+#include "ShaderHelpers.hlsli"
 
 // cbuffer for necessary information from the CPU
 cbuffer PixelConstantData : register(b0)
 {
 	float c_time;		// Total time active
 }
-
-// Struct representing the data we expect to receive from earlier pipeline stages
-// - Matches the struct in the singular VertexShader
-struct VertexToPixel
-{
-	float4 screenPosition	: SV_POSITION;
-	float3 normal			: NORMAL;
-	float2 uv				: TEXCOORD;
-};
 
 // Procedural Pixel Shader generates a 3x3 basic grid of colors
 // in RGB and CYM, repeated a given number of times across the
