@@ -9,14 +9,23 @@ cbuffer PixelConstantData : register(b0)
 	float4 c_color; // Color to tint the main color with
 	float3 c_cameraPosition; // Position of the active Camera
 	float  c_roughness; // Inverse shininess of the object
+	float2 c_uvOffset; // Universal Offset for the UVs
+	float  c_uvScale; // Universal Scale for the UVs
 }
 
+// Struct representing constant lighting data (ambient color and generic light) for all pixels
 cbuffer PixelLightingData : register(b1)
 {
 	float4 c_ambientLight; // Scene ambient color
 	Light c_directionalLights[DIRECTIONAL_LIGHT_COUNT]; // Sample directional lights
 	Light c_pointLights[POINT_LIGHT_COUNT]; // Sample point lights
 }
+
+// Textures and Samplers
+Texture2D DiffuseTexture : register(t0); // t registers for textures
+Texture2D RoughnessTexture : register(t1); // Inverse of a Specular Map, because that is just the textures I downloaded
+
+SamplerState BasicSampler : register(s0); // s registers for samplers
 
 // --------------------------------------------------------
 // The entry point (main method) for our pixel shader
@@ -32,21 +41,29 @@ float4 main(VertexToPixel input) : SV_TARGET
 	// Re-normalize input normal
 	input.normal = normalize(input.normal);
 	
+	// Modify UVs (scale first, then offset)
+	input.uv /= c_uvScale; // Invert the scale so that .1 actually multiplies UV by 10 instead of dividing
+	input.uv += c_uvOffset;
+
+	// Calculate basic color modifiers from Textures (surface color and specular modifier)
+	float4 materialColor = float4((c_color * DiffuseTexture.Sample(BasicSampler, input.uv)).rgb, 1.f); // normalize A to 1
+	float specValue = 1.f - RoughnessTexture.Sample(BasicSampler, input.uv).r; // Textures used are Roughness values, not Specular, so invert
+
 	// Calculate Ambient Light
-	float4 ambientTerm = c_ambientLight * c_color;
+	float4 ambientTerm = c_ambientLight * materialColor;
 	
 	// Sum Directional Light calculations
 	float4 directionalLightSum = float4(0.f, 0.f, 0.f, 1.f);
 	for (int i = 0; i < DIRECTIONAL_LIGHT_COUNT; i++) {
 		directionalLightSum += CalculateDirectionalLightDiffuseAndSpecular(
-			c_directionalLights[i], input, c_cameraPosition, c_roughness, c_color);
+			c_directionalLights[i], input, c_cameraPosition, c_roughness, materialColor, specValue);
 	}
 
 	// Sum Point Light calculations
 	float4 pointLightSum = float4(0.f, 0.f, 0.f, 1.f);
 	for (int j = 0; j < POINT_LIGHT_COUNT; j++) {
 		pointLightSum += CalculatePointLightDiffuseAndSpecular(
-			c_pointLights[j], input, c_cameraPosition, c_roughness, c_color);
+			c_pointLights[j], input, c_cameraPosition, c_roughness, materialColor, specValue);
 	}
 
 	return ambientTerm + directionalLightSum + pointLightSum;

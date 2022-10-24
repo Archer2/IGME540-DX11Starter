@@ -39,7 +39,7 @@ void Entity::Update(float deltaTime)
 	m_timeSinceCreation += deltaTime;
 
 	// Some dummy code - all Entities rotate a little bit around Y
-	m_transform.AddAbsoluteRotation(0.f, 0.f, XM_2PI * deltaTime / 8.f);
+	m_transform.AddAbsoluteRotation(0.f, 0.f, XM_2PI * deltaTime / 16.f);
 }
 
 //-----------------------------------------------
@@ -54,7 +54,7 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 	std::shared_ptr<SimpleVertexShader> vertexShader = m_material->GetVertexShader();
 	std::shared_ptr<SimplePixelShader> pixelShader = m_material->GetPixelShader();
 
-	// Set material's shaders to Active on the GPU
+	// Set material's shaders to Active on the GPU - do in Material? Call would have to be first
 	vertexShader->SetShader();
 	pixelShader->SetShader();
 
@@ -76,11 +76,12 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 
 	//vsData.c_tintColor = XMFLOAT4(.7f, .65f, 1.f, 1.f); // Nice blue highlight tint relic
 
-	// Copy data to Active Shaders
+	m_material->PrepareMaterial(); // Passing all data to the Material is still too cumbersome - pass Entity reference?
+
+	// Copy data to Active Shaders - do in Material? Call would have to be last
 	vertexShader->CopyAllBufferData();
 	pixelShader->CopyAllBufferData();
 
-	// m_material->Prepare(); // <--- WHAT SHOULD HAPPEN ... but it would be too cumbersome to pass all the data to the Material
 	m_mesh->Draw(); // Draws the Mesh with set data
 }
 

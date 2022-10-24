@@ -48,7 +48,7 @@ VertexToPixel main( VertexShaderInput input )
 	output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 
 	// Pass through the Normal, UV, and World Position
-	output.normal = mul((float3x3)c_worldInvTranspose, input.normal);
+	output.normal = normalize(mul((float3x3)c_worldInvTranspose, input.normal)); // Must be re-normalized, so is this necessary?
 	output.uv = input.uv;
 	output.worldPosition = mul(c_worldTransform, float4(input.localPosition, 1.0f)).xyz;
 

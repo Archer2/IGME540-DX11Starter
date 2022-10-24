@@ -37,6 +37,8 @@ private:
 	void CreateMaterials();
 	void CreateLights();
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadTexture(std::wstring a_filePath);
+
 	// Updating Helper methods
 	void UpdateUI(float deltaTime);
 	void UIStatsWindow();

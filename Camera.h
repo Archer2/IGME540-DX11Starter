@@ -53,15 +53,15 @@ public:
 	float GetMovementSpeed();
 	float GetLookAtSpeed();
 
-	DirectX::XMFLOAT4X4 GetViewMatrix();
-	DirectX::XMFLOAT4X4 GetProjectionMatrix();
+	Matrix4 GetViewMatrix();
+	Matrix4 GetProjectionMatrix();
 	Transform* GetTransform();
 
 protected:
 	Transform m_transform;
 
-	DirectX::XMFLOAT4X4 m_viewMatrix;
-	DirectX::XMFLOAT4X4 m_projectionMatrix;
+	Matrix4 m_viewMatrix;
+	Matrix4 m_projectionMatrix;
 	
 	ProjectionType m_projectionType;
 
@@ -70,13 +70,13 @@ protected:
 	float m_nearClipDistance;
 	float m_farClipDistance;
 	
-	DirectX::XMFLOAT2 m_rotationPitchYaw; // Pitch - x, Yaw = y. Placeholder to use Euler rotations, ignoring roll, since Quaternions from Transform add phantom Roll over time
+	Vector2 m_rotationPitchYaw; // Pitch - x, Yaw = y. Placeholder to use Euler rotations, ignoring roll, since Quaternions from Transform add phantom Roll over time
 
 	float m_movementSpeed;
 	float m_lookAtSpeed;
 
-	DirectX::XMFLOAT4X4 CalculateViewMatrix();
-	DirectX::XMFLOAT4X4 CalculateProjectionMatrix();
+	Matrix4 CalculateViewMatrix();
+	Matrix4 CalculateProjectionMatrix();
 	void UpdateInput(float deltaTime);
 };
 

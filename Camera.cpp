@@ -281,7 +281,7 @@ void Camera::UpdateInput(float deltaTime)
 	//m_transform.Move(movement);
 
 	if (input.MouseRightDown()) {
-		XMFLOAT2 rotation; // Normalization operation will likely change Int values into Floating Point
+		Vector2 rotation; // Normalization operation will likely change Int values into Floating Point
 		rotation.x = (float)input.GetMouseXDelta();
 		rotation.y = (float)input.GetMouseYDelta();
 		XMStoreFloat2(&rotation, XMVectorScale(XMVector2Normalize(XMLoadFloat2(&rotation)), m_lookAtSpeed * deltaTime));

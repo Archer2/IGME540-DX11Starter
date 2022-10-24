@@ -60,7 +60,9 @@ float4 DiffuseBRDF(float3 directionToLight, float3 normal, float4 totalLightColo
 //	- cameraPosition: world position of the eyepoint
 //	- lightDirection: direction of the Light - Light TO Pixel
 //	- roughness: roughness constant of the material (inverse shininess)
-float4 CalculateSpecular(float3 normal, float3 pixelPosition, float3 cameraPosition, float3 lightDirection, float roughness)
+//	- pixelSpecular: specular value of this pixel from a SpecMap (1 to ignore)
+float4 CalculateSpecular(float3 normal, float3 pixelPosition, float3 cameraPosition, 
+	float3 lightDirection, float roughness, float pixelSpecular)
 {
 	float3 v = normalize(cameraPosition - pixelPosition);
 	float3 r = reflect(lightDirection, normal);
@@ -72,7 +74,7 @@ float4 CalculateSpecular(float3 normal, float3 pixelPosition, float3 cameraPosit
 	else
 		specularTerm = float4(0, 0, 0, 0);
 
-	return specularTerm;
+	return specularTerm * pixelSpecular;
 }
 
 // Basic Specular Light calculation
@@ -98,8 +100,9 @@ float Attenuate(Light light, float3 worldPos)
 //	- cameraPosition: world position of the euepoint
 //	- roughness: rougness of the object - inverse shininess
 //	- color: TEMPORARY - universal color of the object
+//	- pixelSpecular: per-pixel specular value from a Specular Map (1 to ignore)
 float4 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, VertexToPixel pixelData, 
-	float3 cameraPosition, float roughness, float4 color)
+	float3 cameraPosition, float roughness, float4 color, float pixelSpecular)
 {
 	// Calculate Diffuse Light
 	float3 lightDirection = normalize(directionalLight.Direction);
@@ -108,7 +111,8 @@ float4 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, Verte
 	float4 diffuseTerm = DiffuseBRDF(-lightDirection, pixelData.normal, lightColor, color);
 
 	// Calculate Specular Light
-	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, lightDirection, roughness);
+	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, 
+		lightDirection, roughness, pixelSpecular);
 	float4 specularTerm = SpecularBRDF(spec, lightColor, color);
 
 	return diffuseTerm + specularTerm;
@@ -120,8 +124,9 @@ float4 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, Verte
 //	- cameraPosition: world position of the euepoint
 //	- roughness: rougness of the object - inverse shininess
 //	- color: TEMPORARY - universal color of the object
+//	- pixelSpecular: per-pixel specular value from a Specular Map (1 to ignore)
 float4 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pixelData,
-	float3 cameraPosition, float roughness, float4 color)
+	float3 cameraPosition, float roughness, float4 color, float pixelSpecular)
 {
 	// Calculate Diffuse Light
 	float3 lightDirection = normalize(pixelData.worldPosition - pointLight.Position);
@@ -130,7 +135,8 @@ float4 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pix
 	float4 diffuseTerm = DiffuseBRDF(-lightDirection, pixelData.normal, lightColor, color);
 
 	// Calculate Specular Light
-	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, lightDirection, roughness);
+	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, 
+		lightDirection, roughness, pixelSpecular);
 	float4 specularTerm = SpecularBRDF(spec, lightColor, color);
 
 	return (diffuseTerm + specularTerm) * Attenuate(pointLight, pixelData.worldPosition);

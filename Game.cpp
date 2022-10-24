@@ -12,6 +12,8 @@
 #include <d3dcompiler.h>
 #include <ctime> // For seeding C Random generator with current time
 
+#include "WICTextureLoader.h"
+
 // For the DirectX Math library
 using namespace DirectX;
 
@@ -133,7 +135,7 @@ void Game::LoadGeometry()
 void Game::GenerateEntities()
 {
 	// Generate a fancy cube just above world origin
-	entities.push_back(std::make_shared<Entity>(geometry[0], materials[1]));
+	entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
 	entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
 	// Generate a line of entities, 1 for each geometry
@@ -143,7 +145,7 @@ void Game::GenerateEntities()
 		xPosition += entityOffset; // Increment position for the line
 
 		// Create and edit entity
-		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[0]);
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
 		entity->GetTransform()->SetAbsolutePosition(xPosition, -2.5f, 0.f); // Offset down so planes are visible from origin camera
 		entities.push_back(entity);
 	}
@@ -153,15 +155,60 @@ void Game::GenerateEntities()
 }
 
 // ----------------------------------------------------------
-// Initializes some basic Materials
+// Initializes some Materials using loaded in textures
 // ----------------------------------------------------------
 void Game::CreateMaterials()
 {
-	// Basic Pixel and Vertex Shaders
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f)); // Basic white color tint
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 0.5f, 0.5f, 1.f))); // Red color tint
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 1.f, 0.5f, 1.f))); // Blue color tint
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(0.5f, 0.5f, 1.f, 1.f))); // Green color tint
+	// Load some textures
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleSRV =
+		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Roughness.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesSRV =
+		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesRoughnessSRV =
+		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Roughness.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodSRV = 
+		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Roughness.png");
+
+	// Create a Sampler state
+	D3D11_SAMPLER_DESC desc = {};
+	desc.Filter = D3D11_FILTER_ANISOTROPIC;
+	desc.MaxAnisotropy = 4;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.MaxLOD = D3D11_FLOAT32_MAX;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
+	device->CreateSamplerState(&desc, samplerState.GetAddressOf());
+
+	// Basic Pixel and Vertex Shaders (basic white color tint)
+	size_t counter = materials.size(); // Counter to access the materials vector at the new slot
+
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("DiffuseTexture", marbleSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", marbleRoughnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++; // Increment counter to be in next Material's position
+
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("DiffuseTexture", metalPlatesSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->SetUVScale(.5f);
+	counter++; // Increment counter for next Material
+
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("DiffuseTexture", woodSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	// No need to increment counter
+
+	// Procedural Pixel Shader
 	materials.push_back(std::make_shared<Material>(vertexShader, customPixelShader));
 }
 
@@ -174,7 +221,7 @@ void Game::CreateLights()
 	BasicLight directionallight1 = {};
 	directionallight1.Type = LightType::Directional;
 	directionallight1.Direction = Vector3(-1.f, 1.f, 0.f);
-	directionallight1.Color = Vector3(.1f, .1f, 1.f);
+	directionallight1.Color = Vector3(0.8f, 0.8f, 1.f);
 	directionallight1.Intensity = 1.f;
 	directionalLights.push_back(directionallight1);
 	
@@ -182,7 +229,7 @@ void Game::CreateLights()
 	BasicLight directionallight2 = {};
 	directionallight2.Type = LightType::Directional;
 	directionallight2.Direction = Vector3(1.f, 0.f, 0.f);
-	directionallight2.Color = Vector3(1.f, .1f, .1f);
+	directionallight2.Color = Vector3(1.f, 0.8f, 0.8f);
 	directionallight2.Intensity = 1.f;
 	directionalLights.push_back(directionallight2);
 
@@ -190,7 +237,7 @@ void Game::CreateLights()
 	BasicLight directionallight3 = {};
 	directionallight3.Type = LightType::Directional;
 	directionallight3.Direction = Vector3(0.f, -1.f, 0.f);
-	directionallight3.Color = Vector3(.1f, 1.f, .1f);
+	directionallight3.Color = Vector3(0.8f, 1.f, 0.8f);
 	directionallight3.Intensity = 1.f;
 	directionalLights.push_back(directionallight3);
 
@@ -211,6 +258,24 @@ void Game::CreateLights()
 	pointLight2.Color = Vector3(1.f, 1.f, 1.f);
 	pointLight2.Intensity = .7f;
 	pointLights.push_back(pointLight2);
+}
+
+// ----------------------------------------------------------
+// Loads a Texture from a given filepath using the Game's
+// Device and DeviceContext and the WICTextureLoader. Returns
+// a ShaderResourceView and does not create an ID3D11Resource
+//	- a_filePath: Relative filepath. Fixed using FixPath()
+// ----------------------------------------------------------
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Game::LoadTexture(std::wstring a_filePath)
+{
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureResourceView;
+	CreateWICTextureFromFile(
+		device.Get(),
+		context.Get(),
+		FixPath(a_filePath).c_str(),
+		nullptr,
+		textureResourceView.GetAddressOf());
+	return textureResourceView;
 }
 
 // --------------------------------------------------------
