@@ -65,12 +65,8 @@ void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std:
 	vertexShader->SetMatrix4x4("c_projectionMatrix", a_mainCamera->GetProjectionMatrix());
 
 	// Check for different Pixel Shader constant variables - TODO: This is not sustainable - cannot check every possible shader name
-	if (pixelShader->HasVariable("c_color"))
-		pixelShader->SetFloat4("c_color", m_material->GetColorTint());
 	if (pixelShader->HasVariable("c_cameraPosition"))
 		pixelShader->SetFloat3("c_cameraPosition", a_mainCamera->GetTransform()->GetPosition());
-	if (pixelShader->HasVariable("c_roughness"))
-		pixelShader->SetFloat("c_roughness", m_material->GetRoughness());
 	if (pixelShader->HasVariable("c_time"))
 		pixelShader->SetFloat("c_time", m_timeSinceCreation);
 

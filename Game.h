@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Material.h"
 #include "Lights.h"
+#include "Sky.h"
 
 #include "simpleshader/SimpleShader.h"
 
@@ -38,6 +39,7 @@ private:
 	void CreateLights();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadTexture(std::wstring a_filePath);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadTextureCube(std::wstring a_filePath);
 
 	// Updating Helper methods
 	void UpdateUI(float deltaTime);
@@ -59,6 +61,7 @@ private:
 	std::vector<std::shared_ptr<Material>> materials;
 	std::vector<BasicLight> directionalLights; // Pointer is really not needed for these structs, at least not now
 	std::vector<BasicLight> pointLights;
+	std::shared_ptr<Sky> sky;
 
 	// Camera
 	std::shared_ptr<Camera> camera;
@@ -67,5 +70,7 @@ private:
 	std::shared_ptr<SimplePixelShader> pixelShader;
 	std::shared_ptr<SimplePixelShader> customPixelShader;
 	std::shared_ptr<SimpleVertexShader> vertexShader;
+	std::shared_ptr<SimpleVertexShader> skyVertexShader; 
+	std::shared_ptr<SimplePixelShader> skyPixelShader;
 };
 

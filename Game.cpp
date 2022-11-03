@@ -13,6 +13,7 @@
 #include <ctime> // For seeding C Random generator with current time
 
 #include "WICTextureLoader.h"
+#include "DDSTextureLoader.h"
 
 // For the DirectX Math library
 using namespace DirectX;
@@ -88,8 +89,10 @@ void Game::Init()
 
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
-	cameraTransform.SetAbsolutePosition(0.f, 0.f, -15.f);
+	cameraTransform.SetAbsolutePosition(0.f, 0.f, 15.f);
+	cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
+	camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camear rotation
 
 	// Tell the input assembler (IA) stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
@@ -110,6 +113,8 @@ void Game::LoadShaders()
 	vertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"VertexShader.cso").c_str());
 	pixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"PixelShader.cso").c_str());
 	customPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"ProceduralPixelShader.cso").c_str());
+	skyVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"SkyVertexShader.cso").c_str());
+	skyPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"SkyPixelShader.cso").c_str());
 }
 
 // --------------------------------------------------------
@@ -134,9 +139,26 @@ void Game::LoadGeometry()
 // --------------------------------------------------------
 void Game::GenerateEntities()
 {
+	// Create a Sky
+	D3D11_SAMPLER_DESC desc = {};
+	desc.Filter = D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT; // Skybox is always same distance, so Point MIP, and Linear Color
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.MaxLOD = D3D11_FLOAT32_MAX;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
+	device->CreateSamplerState(&desc, samplerState.GetAddressOf());
+	sky = std::make_shared<Sky>(
+		device,
+		geometry[0],
+		LoadTextureCube(L"../../assets/materials/skies/Planet"),
+		samplerState,
+		skyVertexShader,
+		skyPixelShader);
+
 	// Generate a fancy cube just above world origin
-	entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
-	entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
+	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
+	//entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
 	// Generate a line of entities, 1 for each geometry
 	float entityOffset = 4.f; // Offset of each entity from its neighbors
@@ -146,12 +168,12 @@ void Game::GenerateEntities()
 
 		// Create and edit entity
 		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
-		entity->GetTransform()->SetAbsolutePosition(xPosition, -2.5f, 0.f); // Offset down so planes are visible from origin camera
+		entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
 		entities.push_back(entity);
 	}
 
 	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
-	entities[1]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
+	entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
 }
 
 // ----------------------------------------------------------
@@ -217,34 +239,18 @@ void Game::CreateMaterials()
 // --------------------------------------------------------
 void Game::CreateLights()
 {
-	// Blue light facing -X and +Y
-	BasicLight directionallight1 = {};
-	directionallight1.Type = LightType::Directional;
-	directionallight1.Direction = Vector3(-1.f, 1.f, 0.f);
-	directionallight1.Color = Vector3(0.8f, 0.8f, 1.f);
-	directionallight1.Intensity = 1.f;
-	directionalLights.push_back(directionallight1);
-	
-	// Red light facing +X
-	BasicLight directionallight2 = {};
-	directionallight2.Type = LightType::Directional;
-	directionallight2.Direction = Vector3(1.f, 0.f, 0.f);
-	directionallight2.Color = Vector3(1.f, 0.8f, 0.8f);
-	directionallight2.Intensity = 1.f;
-	directionalLights.push_back(directionallight2);
-
-	// Green light facing -Y
-	BasicLight directionallight3 = {};
-	directionallight3.Type = LightType::Directional;
-	directionallight3.Direction = Vector3(0.f, -1.f, 0.f);
-	directionallight3.Color = Vector3(0.8f, 1.f, 0.8f);
-	directionallight3.Intensity = 1.f;
-	directionalLights.push_back(directionallight3);
+	// Intense Directional Light facing from the Sun location in the (manually set) Sky
+	BasicLight sunLight = {};
+	sunLight.Type = LightType::Directional;
+	sunLight.Direction = Vector3(0.f, .2f, -1.f);
+	sunLight.Color = Vector3(0.89f, 0.788f, 0.757f);
+	sunLight.Intensity = 2.f;
+	directionalLights.push_back(sunLight);
 
 	// White light to +X of the sphere
 	BasicLight pointLight1 = {};
 	pointLight1.Type = LightType::Directional;
-	pointLight1.Position = Vector3(2.f, -2.5f, 0.f);
+	pointLight1.Position = Vector3(2.f, 0.f, 0.f);
 	pointLight1.Range = 10.f;
 	pointLight1.Color = Vector3(1.f, 1.f, 1.f);
 	pointLight1.Intensity = .7f;
@@ -253,7 +259,7 @@ void Game::CreateLights()
 	// White light to -X of the sphere
 	BasicLight pointLight2 = {};
 	pointLight2.Type = LightType::Directional;
-	pointLight2.Position = Vector3(-2.f, -2.5f, 0.f);
+	pointLight2.Position = Vector3(-2.f, 0.f, 0.f);
 	pointLight2.Range = 10.f;
 	pointLight2.Color = Vector3(1.f, 1.f, 1.f);
 	pointLight2.Intensity = .7f;
@@ -275,6 +281,107 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Game::LoadTexture(std::wstring 
 		FixPath(a_filePath).c_str(),
 		nullptr,
 		textureResourceView.GetAddressOf());
+	return textureResourceView;
+}
+
+// --------------------------------------------------------
+// Loads a Texture from a given filepath using the Game's
+// Device and DeviceContext. Returns a ShaderResourceView 
+// and does not create an ID3D11Resource. Function accepts a
+// path to EITHER a .DDS file OR a folder containing 6 .png
+// files named "front", "back", "left", "right", "up", and
+// "down".
+//	- a_filePath: Relative filepath. Fixed using FixPath()
+//  - a_bIsDDS: Whether or not this is a single .DDS Texture
+//	  Cube file. If it is not, code taken from Chris Cascioli's
+//	  sample code is used to generate the Cube from 6 individual 
+//	  textures
+// --------------------------------------------------------
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Game::LoadTextureCube(std::wstring a_filePath)
+{
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureResourceView;
+	// If this is a single file ending in the .dds extension. If not, it is assumed to be a folder containing 6 .pngs
+	bool bIsDDS = (a_filePath.substr(a_filePath.size() - 4) == L".dds") ? true : false;
+
+	// Single file, load using DDSTextureLoader
+	if (bIsDDS) {
+		CreateDDSTextureFromFile(
+			device.Get(),
+			context.Get(),
+			FixPath(a_filePath).c_str(),
+			nullptr,
+			textureResourceView.GetAddressOf());
+	}
+	// Credit for the following code is to Chis Cascioli
+	else {
+		// Load the 6 textures into an array.
+		// - We need references to the TEXTURES, not SHADER RESOURCE VIEWS!
+		// - Explicitly NOT generating mipmaps, as we don't need them for the sky!
+		// - Order matters here! +X, -X, +Y, -Y, +Z, -Z
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> textures[6] = {};
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/right.png").c_str(), (ID3D11Resource**)textures[0].GetAddressOf(), 0);
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/left.png").c_str(), (ID3D11Resource**)textures[1].GetAddressOf(), 0);
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/up.png").c_str(), (ID3D11Resource**)textures[2].GetAddressOf(), 0);
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/down.png").c_str(), (ID3D11Resource**)textures[3].GetAddressOf(), 0);
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/front.png").c_str(), (ID3D11Resource**)textures[4].GetAddressOf(), 0);
+		CreateWICTextureFromFile(device.Get(), FixPath(a_filePath + L"/back.png").c_str(), (ID3D11Resource**)textures[5].GetAddressOf(), 0);
+
+		// We'll assume all of the textures are the same color format and resolution,
+		// so get the description of the first shader resource view
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		textures[0]->GetDesc(&faceDesc);
+
+		// Describe the resource for the cube map, which is simply
+		// a "texture 2d array" with the TEXTURECUBE flag set.
+		// This is a special GPU resource format, NOT just a
+		// C++ array of textures!!!
+		D3D11_TEXTURE2D_DESC cubeDesc = {};
+		cubeDesc.ArraySize = 6; // Cube map!
+		cubeDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE; // We'll be using as a texture in a shader
+		cubeDesc.CPUAccessFlags = 0; // No read back
+		cubeDesc.Format = faceDesc.Format; // Match the loaded texture's color format
+		cubeDesc.Width = faceDesc.Width; // Match the size
+		cubeDesc.Height = faceDesc.Height; // Match the size
+		cubeDesc.MipLevels = 1; // Only need 1
+		cubeDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE; // A CUBE, not 6 separate textures
+		cubeDesc.Usage = D3D11_USAGE_DEFAULT; // Standard usage
+		cubeDesc.SampleDesc.Count = 1;
+		cubeDesc.SampleDesc.Quality = 0;
+
+		// Create the final texture resource to hold the cube map
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> cubeMapTexture;
+		device->CreateTexture2D(&cubeDesc, 0, cubeMapTexture.GetAddressOf());
+
+		// Loop through the individual face textures and copy them,
+		// one at a time, to the cube map texure
+		for (int i = 0; i < 6; i++) {
+			// Calculate the subresource position to copy into
+			unsigned int subresource = D3D11CalcSubresource(
+				0, // Which mip (zero, since there's only one)
+				i, // Which array element?
+				1); // How many mip levels are in the texture?
+			// Copy from one resource (texture) to another
+			context->CopySubresourceRegion(
+				cubeMapTexture.Get(), // Destination resource
+				subresource, // Dest subresource index (one of the array elements)
+				0, 0, 0, // XYZ location of copy
+				textures[i].Get(), // Source resource
+				0, // Source subresource index (we're assuming there's only one)
+				0); // Source subresource "box" of data to copy (zero means the whole thing)
+		}
+
+		// At this point, all of the faces have been copied into the
+		// cube map texture, so we can describe a shader resource view for it
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = cubeDesc.Format; // Same format as texture
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE; // Treat this as a cube!
+		srvDesc.TextureCube.MipLevels = 1; // Only need access to 1 mip
+		srvDesc.TextureCube.MostDetailedMip = 0; // Index of the first mip we want to see
+
+		// Make SRV
+		device->CreateShaderResourceView(cubeMapTexture.Get(), &srvDesc, textureResourceView.GetAddressOf());
+	}
+
 	return textureResourceView;
 }
 
@@ -451,7 +558,7 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	float sceneAmbientColor[4] = { 0.f, 0.f, 0.f, 1.f };
+	float sceneAmbientColor[4] = { 0.14f, 0.1f, 0.21f, 1.f };
 
 	// Frame START
 	// - These things should happen ONCE PER FRAME
@@ -463,11 +570,6 @@ void Game::Draw(float deltaTime, float totalTime)
 
 		// Clear the depth buffer (resets per-pixel occlusion information)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-		// Create a scene ambient color from the background color
-		for (int i = 0; i < 3; i++) {
-			sceneAmbientColor[i] = bgColor[i] / 3.5f; // Divisor works well for the Cornflower Blue background
-		}
 	}
 
 	// Draw all stored Entities
@@ -487,6 +589,9 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Draw Entity
 		entity->Draw(context, camera);
 	}
+
+	// Draw Sky after all Entities
+	sky->Draw(context, camera);
 
 	// Frame END
 	// - These should happen exactly ONCE PER FRAME

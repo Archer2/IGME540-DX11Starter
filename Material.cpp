@@ -63,6 +63,12 @@ void Material::PrepareMaterial()
 		m_pixelShader->SetFloat2("c_uvOffset", m_uvOffset);
 	if (m_pixelShader->HasVariable("c_uvScale"))
 		m_pixelShader->SetFloat("c_uvScale", m_uvScale);
+
+	// Set miscellaneous Material values
+	if (m_pixelShader->HasVariable("c_color"))
+		m_pixelShader->SetFloat4("c_color", m_colorTint);
+	if (m_pixelShader->HasVariable("c_roughness"))
+		m_pixelShader->SetFloat("c_roughness", m_roughness);
 }
 
 // ----------------------------------------------------------
