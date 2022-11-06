@@ -182,20 +182,42 @@ void Game::GenerateEntities()
 void Game::CreateMaterials()
 {
 	// Load some textures
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultNormalSRV =
+		LoadTexture(L"../../assets/materials/flat_normals.png");
+
+	/*
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleNormalSRV =
+		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Roughness.png");
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesSRV =
 		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesNormalSRV =
+		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesRoughnessSRV =
 		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Roughness.png");
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodSRV = 
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodNormalSRV =
+		LoadTexture(L"../../assets/materials//Wood058_1K//Wood058_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Roughness.png");
+	*/
+
+	// Provided textures with good normal maps
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleNormalSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_normals.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionSRV =
+		LoadTexture(L"../../assets/materials/Cushion/cushion.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionNormalSRV =
+		LoadTexture(L"../../assets/materials/Cushion/cushion_normals.png");
 
 	// Create a Sampler state
 	D3D11_SAMPLER_DESC desc = {};
@@ -211,22 +233,38 @@ void Game::CreateMaterials()
 	// Basic Pixel and Vertex Shaders (basic white color tint)
 	size_t counter = materials.size(); // Counter to access the materials vector at the new slot
 
+	/* Previous textures are not displaying normal maps well, so are not used as Materials for A9
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
 	materials[counter]->AddTextureSRV("DiffuseTexture", marbleSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", (marbleNormalSRV != nullptr) ? marbleNormalSRV : defaultNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", marbleRoughnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++; // Increment counter to be in next Material's position
-
+	
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
 	materials[counter]->AddTextureSRV("DiffuseTexture", metalPlatesSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", (metalPlatesNormalSRV != nullptr) ? metalPlatesNormalSRV : defaultNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	materials[counter]->SetUVScale(.5f);
 	counter++; // Increment counter for next Material
-
+	
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
 	materials[counter]->AddTextureSRV("DiffuseTexture", woodSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", (woodNormalSRV != nullptr) ? woodNormalSRV : defaultNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	*/
+	// Provided textures provide good demonstration of normal maps
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("DiffuseTexture", cobbleSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", cobbleNormalSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
+	 
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("DiffuseTexture", cushionSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", cushionNormalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	// No need to increment counter
 

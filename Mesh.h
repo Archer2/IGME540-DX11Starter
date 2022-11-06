@@ -25,6 +25,7 @@ public:
 	UINT GetIndexCount();
 
 private:
+	void CalculateTangents(Vertex* a_vertices, UINT a_vertexCount, UINT* a_indices, UINT a_indexCount);
 	void CreateMesh(Vertex* a_vertices, UINT a_vertexCount, UINT* a_indices, UINT a_indexCount, Microsoft::WRL::ComPtr<ID3D11Device> a_device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_context);
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;

@@ -35,6 +35,7 @@ VertexToPixel main( VertexShaderInput input )
 	output.normal = normalize(mul((float3x3)c_worldInvTranspose, input.normal)); // Must be re-normalized, so is this necessary?
 	output.uv = input.uv;
 	output.worldPosition = mul(c_worldTransform, float4(input.localPosition, 1.0f)).xyz;
+	output.tangent = normalize(mul((float3x3)c_worldTransform, input.tangent)); // Ignore Translation
 
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)

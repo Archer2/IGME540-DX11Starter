@@ -1,5 +1,6 @@
 #include "Mesh.h"
 
+#include <DirectXMath.h>
 #include <fstream>
 
 template<class T>
@@ -309,6 +310,75 @@ UINT Mesh::GetIndexCount()
 }
 
 
+// --------------------------------------------------------
+// Calculates the tangents of the vertices in a mesh
+// - Code originally adapted from: http://www.terathon.com/code/tangent.html
+// - Updated version found here: http://foundationsofgameenginedev.com/FGED2-sample.pdf
+// - See listing 7.4 in section 7.5 (page 9 of the PDF)
+// - Code provided by Chris Cascioli
+//
+// - Note: For this code to work, your Vertex format must
+// contain an XMFLOAT3 called Tangent
+//
+// - Be sure to call this BEFORE creating your D3D vertex/index buffers
+// --------------------------------------------------------
+void Mesh::CalculateTangents(Vertex* a_vertices, UINT a_vertexCount, UINT* a_indices, UINT a_indexCount)
+{
+	// Reset tangents
+	for (int i = 0; i < a_vertexCount; i++) {
+		a_vertices[i].Tangent = DirectX::XMFLOAT3(0, 0, 0);
+	}
+	// Calculate tangents one whole triangle at a time
+	for (int i = 0; i < a_indexCount;) {
+		// Grab indices and vertices of first triangle
+		unsigned int i1 = a_indices[i++];
+		unsigned int i2 = a_indices[i++];
+		unsigned int i3 = a_indices[i++];
+		Vertex* v1 = &a_vertices[i1];
+		Vertex* v2 = &a_vertices[i2];
+		Vertex* v3 = &a_vertices[i3];
+		// Calculate vectors relative to triangle positions
+		float x1 = v2->Position.x - v1->Position.x;
+		float y1 = v2->Position.y - v1->Position.y;
+		float z1 = v2->Position.z - v1->Position.z;
+		float x2 = v3->Position.x - v1->Position.x;
+		float y2 = v3->Position.y - v1->Position.y;
+		float z2 = v3->Position.z - v1->Position.z;
+		// Do the same for vectors relative to triangle uv's
+		float s1 = v2->UV.x - v1->UV.x;
+		float t1 = v2->UV.y - v1->UV.y;
+		float s2 = v3->UV.x - v1->UV.x;
+		float t2 = v3->UV.y - v1->UV.y;
+		// Create vectors for tangent calculation
+		float r = 1.0f / (s1 * t2 - s2 * t1);
+		float tx = (t2 * x1 - t1 * x2) * r;
+		float ty = (t2 * y1 - t1 * y2) * r;
+		float tz = (t2 * z1 - t1 * z2) * r;
+		// Adjust tangents of each vert of the triangle
+		v1->Tangent.x += tx;
+		v1->Tangent.y += ty;
+		v1->Tangent.z += tz;
+		v2->Tangent.x += tx;
+		v2->Tangent.y += ty;
+		v2->Tangent.z += tz;
+		v3->Tangent.x += tx;
+		v3->Tangent.y += ty;
+		v3->Tangent.z += tz;
+	}
+	// Ensure all of the tangents are orthogonal to the normals
+	for (int i = 0; i < a_vertexCount; i++) {
+		// Grab the two vectors
+		DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&a_vertices[i].Normal);
+		DirectX::XMVECTOR tangent = DirectX::XMLoadFloat3(&a_vertices[i].Tangent);
+		// Use Gram-Schmidt orthonormalize to ensure
+		// the normal and tangent are exactly 90 degrees apart
+		tangent = DirectX::XMVector3Normalize(
+			DirectX::XMVectorSubtract(tangent, DirectX::XMVectorMultiply(normal, DirectX::XMVector3Dot(normal, tangent))));
+		// Store the tangent
+		DirectX::XMStoreFloat3(&a_vertices[i].Tangent, tangent);
+	}
+}
+
 //-----------------------------------------------
 // Used by different constructors to create the
 // Mesh using data output from that construction
@@ -319,6 +389,9 @@ UINT Mesh::GetIndexCount()
 //-----------------------------------------------
 void Mesh::CreateMesh(Vertex* a_vertices, UINT a_vertexCount, UINT* a_indices, UINT a_indexCount, ComPtr<ID3D11Device> a_device, ComPtr<ID3D11DeviceContext> a_context)
 {
+	// Calculate Tangents before creating the D3D objects
+	CalculateTangents(a_vertices, a_vertexCount, a_indices, a_indexCount);
+
 	// Create a VERTEX BUFFER
 	// - This holds the vertex data of triangles for a single object
 	// - This buffer is created on the GPU, which is where the data needs to

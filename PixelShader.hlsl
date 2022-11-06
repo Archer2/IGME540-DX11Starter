@@ -23,7 +23,8 @@ cbuffer PixelLightingData : register(b1)
 
 // Textures and Samplers
 Texture2D DiffuseTexture : register(t0); // t registers for textures
-Texture2D RoughnessTexture : register(t1); // Inverse of a Specular Map, because that is just the textures I downloaded
+Texture2D NormalTexture : register(t1); // Normal map
+Texture2D RoughnessTexture : register(t2); // Inverse of a Specular Map, because that is just the textures I downloaded
 
 SamplerState BasicSampler : register(s0); // s registers for samplers
 
@@ -38,8 +39,10 @@ SamplerState BasicSampler : register(s0); // s registers for samplers
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	// Re-normalize input normal
+	// Re-normalize input
 	input.normal = normalize(input.normal);
+	float T = normalize(input.tangent);
+	input.tangent = normalize(T - input.normal * dot(T, input.normal)); // Graham-Schmidt ortho-normalization
 	
 	// Modify UVs (scale first, then offset)
 	input.uv /= c_uvScale; // Invert the scale so that .1 actually multiplies UV by 10 instead of dividing
@@ -48,6 +51,12 @@ float4 main(VertexToPixel input) : SV_TARGET
 	// Calculate basic color modifiers from Textures (surface color and specular modifier)
 	float4 materialColor = float4((c_color * DiffuseTexture.Sample(BasicSampler, input.uv)).rgb, 1.f); // normalize A to 1
 	float specValue = 1.f - RoughnessTexture.Sample(BasicSampler, input.uv).r; // Textures used are Roughness values, not Specular, so invert
+
+	// Calculate Normal modifier, and assign to input value for ease of lighting
+	float3 unpackedNormal = NormalTexture.Sample(BasicSampler, input.uv).rgb * 2 - 1; // [0, 1] -> [-1, 1]
+	float3 biTangent = cross(input.tangent, input.normal);
+	float3x3 TBN = float3x3(input.tangent, biTangent, input.normal);
+	input.normal = mul(unpackedNormal, TBN);
 
 	// Calculate Ambient Light
 	float4 ambientTerm = c_ambientLight * materialColor;

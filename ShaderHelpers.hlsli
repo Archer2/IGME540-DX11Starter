@@ -42,6 +42,7 @@ struct VertexToPixel
 	float3 normal			: NORMAL;       // RGBA color
 	float2 uv				: TEXCOORD;		// UV texture coordinate
 	float3 worldPosition	: POSITION;		// World Position of the vertex to be interpolated
+	float3 tangent			: TANGENT;		// Tangent of the vertex to be used in Normal Mapping
 };
 
 // Basic Diffuse Light calculation
@@ -113,6 +114,7 @@ float4 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, Verte
 	// Calculate Specular Light
 	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, 
 		lightDirection, roughness, pixelSpecular);
+	spec *= any(diffuseTerm); // Cut specular if diffuse contribution is 0
 	float4 specularTerm = SpecularBRDF(spec, lightColor, color);
 
 	return diffuseTerm + specularTerm;
@@ -137,6 +139,7 @@ float4 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pix
 	// Calculate Specular Light
 	float4 spec = CalculateSpecular(pixelData.normal, pixelData.worldPosition, cameraPosition, 
 		lightDirection, roughness, pixelSpecular);
+	spec *= any(diffuseTerm); // Cut specular if diffuse contribution is 0
 	float4 specularTerm = SpecularBRDF(spec, lightColor, color);
 
 	return (diffuseTerm + specularTerm) * Attenuate(pointLight, pixelData.worldPosition);
