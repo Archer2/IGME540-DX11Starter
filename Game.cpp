@@ -185,13 +185,14 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultNormalSRV =
 		LoadTexture(L"../../assets/materials/flat_normals.png");
 
-	/*
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Color.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleNormalSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Metalness.png");
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesSRV =
 		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Color.png");
@@ -206,18 +207,17 @@ void Game::CreateMaterials()
 		LoadTexture(L"../../assets/materials//Wood058_1K//Wood058_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Roughness.png");
-	*/
 
 	// Provided textures with good normal maps
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
-		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone.png");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleNormalSRV =
-		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_normals.png");
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionSRV =
-		LoadTexture(L"../../assets/materials/Cushion/cushion.png");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionNormalSRV =
-		LoadTexture(L"../../assets/materials/Cushion/cushion_normals.png");
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
+	//	LoadTexture(L"../../assets/materials/Cobblestone/cobblestone.png");
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleNormalSRV =
+	//	LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_normals.png");
+	//
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionSRV =
+	//	LoadTexture(L"../../assets/materials/Cushion/cushion.png");
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionNormalSRV =
+	//	LoadTexture(L"../../assets/materials/Cushion/cushion_normals.png");
 
 	// Create a Sampler state
 	D3D11_SAMPLER_DESC desc = {};
@@ -233,39 +233,39 @@ void Game::CreateMaterials()
 	// Basic Pixel and Vertex Shaders (basic white color tint)
 	size_t counter = materials.size(); // Counter to access the materials vector at the new slot
 
-	/* Previous textures are not displaying normal maps well, so are not used as Materials for A9
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("DiffuseTexture", marbleSRV);
+	materials[counter]->AddTextureSRV("AlbedoTexture", marbleSRV);
 	materials[counter]->AddTextureSRV("NormalTexture", (marbleNormalSRV != nullptr) ? marbleNormalSRV : defaultNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", marbleRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", marbleMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++; // Increment counter to be in next Material's position
 	
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("DiffuseTexture", metalPlatesSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", (metalPlatesNormalSRV != nullptr) ? metalPlatesNormalSRV : defaultNormalSRV);
-	materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
-	materials[counter]->AddSampler("BasicSampler", samplerState);
-	materials[counter]->SetUVScale(.5f);
-	counter++; // Increment counter for next Material
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	//materials[counter]->AddTextureSRV("AlbedoTexture", metalPlatesSRV);
+	//materials[counter]->AddTextureSRV("NormalTexture", (metalPlatesNormalSRV != nullptr) ? metalPlatesNormalSRV : defaultNormalSRV);
+	//materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
+	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	//materials[counter]->SetUVScale(.5f);
+	//counter++; // Increment counter for next Material
+	//
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	//materials[counter]->AddTextureSRV("AlbedoTexture", woodSRV);
+	//materials[counter]->AddTextureSRV("NormalTexture", (woodNormalSRV != nullptr) ? woodNormalSRV : defaultNormalSRV);
+	//materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
+	//materials[counter]->AddSampler("BasicSampler", samplerState);
 	
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("DiffuseTexture", woodSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", (woodNormalSRV != nullptr) ? woodNormalSRV : defaultNormalSRV);
-	materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
-	materials[counter]->AddSampler("BasicSampler", samplerState);
-	*/
 	// Provided textures provide good demonstration of normal maps
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("DiffuseTexture", cobbleSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", cobbleNormalSRV);
-	materials[counter]->AddSampler("BasicSampler", samplerState);
-	counter++;
-	 
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("DiffuseTexture", cushionSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", cushionNormalSRV);
-	materials[counter]->AddSampler("BasicSampler", samplerState);
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	//materials[counter]->AddTextureSRV("AlbedoTexture", cobbleSRV);
+	//materials[counter]->AddTextureSRV("NormalTexture", cobbleNormalSRV);
+	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	//counter++;
+	// 
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	//materials[counter]->AddTextureSRV("AlbedoTexture", cushionSRV);
+	//materials[counter]->AddTextureSRV("NormalTexture", cushionNormalSRV);
+	//materials[counter]->AddSampler("BasicSampler", samplerState);
 	// No need to increment counter
 
 	// Procedural Pixel Shader
@@ -596,7 +596,8 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	float sceneAmbientColor[4] = { 0.14f, 0.1f, 0.21f, 1.f };
+	float sceneAmbientColor[4] = { 0.11f, 0.07f, 0.18f, 1.f };
+	//float sceneAmbientColor[4] = { 0.f, 0.f, 0.f, 1.f };
 
 	// Frame START
 	// - These things should happen ONCE PER FRAME
@@ -619,10 +620,16 @@ void Game::Draw(float deltaTime, float totalTime)
 			pixelShader->SetFloat4("c_ambientLight", sceneAmbientColor);
 
 		// Set Light Data - Unsustainable for large numbers of lights - create 1+ arrays in Shader
+		int directionalLightCount = (int)directionalLights.size();
+		int pointLightCount = (int)pointLights.size();
 		if (pixelShader->HasVariable("c_directionalLights"))
-			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * (int)directionalLights.size());
+			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * directionalLightCount);
+		if (pixelShader->HasVariable("c_directionalLightCount"))
+			pixelShader->SetInt("c_directionalLightCount", directionalLightCount);
 		if (pixelShader->HasVariable("c_pointLights"))
-			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * (int)pointLights.size());
+			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * pointLightCount);
+		if (pixelShader->HasVariable("c_pointLightCount"))
+			pixelShader->SetInt("c_pointLightCount", pointLightCount);
 
 		// Draw Entity
 		entity->Draw(context, camera);

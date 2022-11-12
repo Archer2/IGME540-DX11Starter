@@ -1,7 +1,6 @@
 #include "ShaderHelpers.hlsli"
 
-#define DIRECTIONAL_LIGHT_COUNT 3
-#define POINT_LIGHT_COUNT 2
+#define MAX_LIGHTS_OF_SINGLE_TYPE 64
 
 // Struct representing constant data shared between all pixels
 cbuffer PixelConstantData : register(b0)
@@ -17,14 +16,17 @@ cbuffer PixelConstantData : register(b0)
 cbuffer PixelLightingData : register(b1)
 {
 	float4 c_ambientLight; // Scene ambient color
-	Light c_directionalLights[DIRECTIONAL_LIGHT_COUNT]; // Sample directional lights
-	Light c_pointLights[POINT_LIGHT_COUNT]; // Sample point lights
+	Light c_directionalLights[MAX_LIGHTS_OF_SINGLE_TYPE]; // Sample directional lights
+	Light c_pointLights[MAX_LIGHTS_OF_SINGLE_TYPE]; // Sample point lights
+	int c_directionalLightCount; // 4-bytes from boundary
+	int c_pointLightCount; // 8-bytes
 }
 
 // Textures and Samplers
-Texture2D DiffuseTexture : register(t0); // t registers for textures
-Texture2D NormalTexture : register(t1); // Normal map
-Texture2D RoughnessTexture : register(t2); // Inverse of a Specular Map, because that is just the textures I downloaded
+Texture2D AlbedoTexture : register(t0); // PBR Albedo
+Texture2D NormalTexture : register(t1); // Normal Map
+Texture2D RoughnessTexture : register(t2); // PBR Roughness Map
+Texture2D MetalnessTexture : register(t3); // PBR Metalness Map
 
 SamplerState BasicSampler : register(s0); // s registers for samplers
 
@@ -41,39 +43,45 @@ float4 main(VertexToPixel input) : SV_TARGET
 {
 	// Re-normalize input
 	input.normal = normalize(input.normal);
-	float T = normalize(input.tangent);
+	float3 T = normalize(input.tangent);
 	input.tangent = normalize(T - input.normal * dot(T, input.normal)); // Graham-Schmidt ortho-normalization
 	
 	// Modify UVs (scale first, then offset)
 	input.uv /= c_uvScale; // Invert the scale so that .1 actually multiplies UV by 10 instead of dividing
 	input.uv += c_uvOffset;
 
-	// Calculate basic color modifiers from Textures (surface color and specular modifier)
-	float4 materialColor = float4((c_color * DiffuseTexture.Sample(BasicSampler, input.uv)).rgb, 1.f); // normalize A to 1
-	float specValue = 1.f - RoughnessTexture.Sample(BasicSampler, input.uv).r; // Textures used are Roughness values, not Specular, so invert
+	// Calculate basic color and modifiers from Textures
+	float3 albedoColor = (c_color * AlbedoTexture.Sample(BasicSampler, input.uv)).rgb; // Alpha channel is unused here
+	albedoColor = pow(albedoColor, 2.2f); // Reverse embedded image Gamma Correction before lighting is applied (only done for surface color texture)
+
+	float roughnessValue = RoughnessTexture.Sample(BasicSampler, input.uv).r; // Possibly should be saturated
+	float metalnessValue = MetalnessTexture.Sample(BasicSampler, input.uv).r; // Probably should be saturated
+
+	// For metals, specular is actually just the albedo. Lerp is used because filtering the texture can result in Metalness Values of not 0 or 1
+	float3 specularColor = lerp(F0_NON_METAL.rrr, albedoColor, metalnessValue); // F0_NON_METAL defined in ShaderHelpers.h
 
 	// Calculate Normal modifier, and assign to input value for ease of lighting
 	float3 unpackedNormal = NormalTexture.Sample(BasicSampler, input.uv).rgb * 2 - 1; // [0, 1] -> [-1, 1]
 	float3 biTangent = cross(input.tangent, input.normal);
 	float3x3 TBN = float3x3(input.tangent, biTangent, input.normal);
 	input.normal = mul(unpackedNormal, TBN);
-
-	// Calculate Ambient Light
-	float4 ambientTerm = c_ambientLight * materialColor;
 	
+	float3 cameraVector = normalize(c_cameraPosition - input.worldPosition); // Normalized vector from Pixel to Camera
+
 	// Sum Directional Light calculations
-	float4 directionalLightSum = float4(0.f, 0.f, 0.f, 1.f);
-	for (int i = 0; i < DIRECTIONAL_LIGHT_COUNT; i++) {
+	float3 directionalLightSum = float3(0.f, 0.f, 0.f);
+	for (int i = 0; i < c_directionalLightCount; i++) {
 		directionalLightSum += CalculateDirectionalLightDiffuseAndSpecular(
-			c_directionalLights[i], input, c_cameraPosition, c_roughness, materialColor, specValue);
+			c_directionalLights[i], input, cameraVector, roughnessValue, specularColor);
 	}
 
 	// Sum Point Light calculations
-	float4 pointLightSum = float4(0.f, 0.f, 0.f, 1.f);
-	for (int j = 0; j < POINT_LIGHT_COUNT; j++) {
+	float3 pointLightSum = float3(0.f, 0.f, 0.f);
+	for (int j = 0; j < c_pointLightCount; j++) {
 		pointLightSum += CalculatePointLightDiffuseAndSpecular(
-			c_pointLights[j], input, c_cameraPosition, c_roughness, materialColor, specValue);
+			c_pointLights[j], input, cameraVector, roughnessValue, specularColor);
 	}
 
-	return ambientTerm + directionalLightSum + pointLightSum;
+	float3 finalLight = (directionalLightSum + pointLightSum) * albedoColor;
+	return float4(pow(finalLight, 1.0f/2.2f), 1.f); // Apply Gamma Correction, and set the Alpha value to 1 (since it doesn't matter)
 }
