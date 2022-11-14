@@ -62,9 +62,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	// Calculate Normal modifier, and assign to input value for ease of lighting
 	float3 unpackedNormal = NormalTexture.Sample(BasicSampler, input.uv).rgb * 2 - 1; // [0, 1] -> [-1, 1]
-	float3 biTangent = cross(input.tangent, input.normal);
+	float3 biTangent = cross(input.normal, input.tangent);
 	float3x3 TBN = float3x3(input.tangent, biTangent, input.normal);
-	input.normal = mul(unpackedNormal, TBN);
+	input.normal = mul(normalize(unpackedNormal), TBN);
 	
 	float3 cameraVector = normalize(c_cameraPosition - input.worldPosition); // Normalized vector from Pixel to Camera
 
