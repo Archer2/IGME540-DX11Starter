@@ -350,10 +350,25 @@ void Game::CreateLights()
 	// Intense Directional Light facing from the Sun location in the (manually set) Sky
 	BasicLight sunLight = {};
 	sunLight.Type = LightType::Directional;
-	sunLight.Direction = Vector3(0.f, .2f, -1.f);
+	sunLight.Direction = Vector3(0.f, .2f, -1.f); // Will be normalized in shader anyways
 	sunLight.Color = Vector3(0.89f, 0.788f, 0.757f);
 	sunLight.Intensity = 2.f;
 	directionalLights.push_back(sunLight);
+
+	// Add a couple lights facing opposite the sun to remove extensive shadows
+	BasicLight backLight1 = {};
+	backLight1.Type = LightType::Directional;
+	backLight1.Direction = Vector3(.5f, .2f, 1.f); // Will be normalized in shader anyways
+	backLight1.Color = Vector3(0.89f, 0.788f, 0.757f);
+	backLight1.Intensity = 1.f;
+	directionalLights.push_back(backLight1);
+
+	BasicLight backLight2 = {};
+	backLight2.Type = LightType::Directional;
+	backLight2.Direction = Vector3(-.5f, -.6f, 1.f); // Will be normalized in shader anyways
+	backLight2.Color = Vector3(0.89f, 0.788f, 0.757f);
+	backLight2.Intensity = 1.f;
+	directionalLights.push_back(backLight2);
 
 	// White light to +X of the sphere
 	BasicLight pointLight1 = {};
@@ -675,8 +690,7 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	float sceneAmbientColor[4] = { 0.11f, 0.07f, 0.18f, 1.f };
-	//float sceneAmbientColor[4] = { 0.f, 0.f, 0.f, 1.f };
+	//float sceneAmbientColor[4] = { 0.11f, 0.07f, 0.18f, 1.f }; - Not used in current shading model (PBR)
 
 	// Frame START
 	// - These things should happen ONCE PER FRAME
@@ -690,13 +704,9 @@ void Game::Draw(float deltaTime, float totalTime)
 		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 
-	// Draw all stored Entities
+	// Draw all stored Entities - This REALLY should be done by a Renderer class on a rendering thread by material ID
 	for (std::shared_ptr<Entity> entity : entities) {
 		std::shared_ptr<SimplePixelShader> pixelShader = entity->GetMaterial()->GetPixelShader();
-
-		// Set Ambient Lighting Data
-		if (pixelShader->HasVariable("c_ambientLight"))
-			pixelShader->SetFloat4("c_ambientLight", sceneAmbientColor);
 
 		// Set Light Data - Unsustainable for large numbers of lights - create 1+ arrays in Shader
 		int directionalLightCount = (int)directionalLights.size();
