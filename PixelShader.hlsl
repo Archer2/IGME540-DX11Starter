@@ -72,16 +72,16 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 directionalLightSum = float3(0.f, 0.f, 0.f);
 	for (int i = 0; i < c_directionalLightCount; i++) {
 		directionalLightSum += CalculateDirectionalLightDiffuseAndSpecular(
-			c_directionalLights[i], input, cameraVector, roughnessValue, specularColor);
+			c_directionalLights[i], input, cameraVector, roughnessValue, metalnessValue, specularColor, albedoColor);
 	}
 
 	// Sum Point Light calculations
 	float3 pointLightSum = float3(0.f, 0.f, 0.f);
 	for (int j = 0; j < c_pointLightCount; j++) {
 		pointLightSum += CalculatePointLightDiffuseAndSpecular(
-			c_pointLights[j], input, cameraVector, roughnessValue, specularColor);
+			c_pointLights[j], input, cameraVector, roughnessValue, metalnessValue, specularColor, albedoColor);
 	}
 
-	float3 finalLight = (directionalLightSum + pointLightSum) * albedoColor;
+	float3 finalLight = directionalLightSum + pointLightSum;
 	return float4(pow(finalLight, 1.0f/2.2f), 1.f); // Apply Gamma Correction, and set the Alpha value to 1 (since it doesn't matter)
 }

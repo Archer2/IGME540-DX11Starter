@@ -154,6 +154,15 @@ float Attenuate(Light light, float3 worldPos)
 	return att * att;
 }
 
+// Conserve energy by conserving Diffuse Light
+//	- diffuseLight: Total Diffuse Light for the pixel
+//	- specularLight: Total Specular Light for the pixel
+//	- metalness: Metalness Value for this pixel
+float3 ConserveDiffuseEnergy(float3 diffuseLight, float3 specularLight, float metalness)
+{
+	return diffuseLight * ((1 - saturate(specularLight)) * (1 - metalness));
+}
+
 // Calculate Diffuse and Specular Terms for a single Directional Light
 //	- directionalLight: directional Light to calculate lighting for
 //	- pixelData: all pixel data for this pixel, easier than passing individual data
@@ -161,22 +170,20 @@ float Attenuate(Light light, float3 worldPos)
 //	- roughness: rougness of the object - inverse shininess
 //	- pixelSpecular: per-pixel specular value from a Specular Map (1 to ignore)
 float3 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, VertexToPixel pixelData, 
-	float3 cameraVector, float roughness, float3 pixelSpecular)
+	float3 cameraVector, float roughness, float metalness, float3 pixelSpecular, float3 pixelColor)
 {
 	// Accumulate Values
-	float3 lightDirection = normalize(directionalLight.Direction);
+	float3 lightDirection = normalize(-directionalLight.Direction);
 	float3 lightColor = directionalLight.Color * directionalLight.Intensity;
 
 	// Calculate Diffuse Light
-	float3 diffuseTerm = DiffuseBRDF(-lightDirection, pixelData.normal);
+	float3 diffuseTerm = DiffuseBRDF(lightDirection, pixelData.normal);
 
 	// Calculate Specular Light
-	//float3 specularTerm = PhongBRDF(pixelData.normal, pixelData.worldPosition, cameraPosition, 
-	//	lightDirection, roughness, pixelSpecular);
-	//specularTerm *= any(diffuseTerm); // Cut specular if diffuse contribution is 0
 	float3 specularTerm = MicrofacetBRDF(pixelData.normal, lightDirection, cameraVector, roughness, pixelSpecular);
+	diffuseTerm = ConserveDiffuseEnergy(diffuseTerm, specularTerm, metalness);
 
-	return (diffuseTerm + specularTerm) * directionalLight.Color * directionalLight.Intensity;
+	return (diffuseTerm * pixelColor + specularTerm) * lightColor;
 }
 
 // Calculate Diffuse and Specular Terms for a single Directional Light
@@ -186,22 +193,20 @@ float3 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, Verte
 //	- roughness: rougness of the object - inverse shininess
 //	- pixelSpecular: per-pixel specular value from a Specular Map (1 to ignore)
 float3 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pixelData,
-	float3 cameraVector, float roughness, float3 pixelSpecular)
+	float3 cameraVector, float roughness, float metalness, float3 pixelSpecular, float3 pixelColor)
 {
 	// Gather Values
-	float3 lightDirection = normalize(pixelData.worldPosition - pointLight.Position);
+	float3 lightDirection = normalize(pointLight.Position - pixelData.worldPosition);
 	float3 lightColor = pointLight.Color * pointLight.Intensity;
 
 	// Calculate Diffuse Light
-	float3 diffuseTerm = DiffuseBRDF(-lightDirection, pixelData.normal);
+	float3 diffuseTerm = DiffuseBRDF(lightDirection, pixelData.normal);
 
 	// Calculate Specular Light
-	//float3 specularTerm = PhongBRDF(pixelData.normal, pixelData.worldPosition, cameraPosition, 
-	//	lightDirection, roughness, pixelSpecular);
-	//specularTerm *= any(diffuseTerm); // Cut specular if diffuse contribution is 0
-	float3 specularTerm = MicrofacetBRDF(pixelData.normal, -lightDirection, cameraVector, roughness, pixelSpecular);
+	float3 specularTerm = MicrofacetBRDF(pixelData.normal, lightDirection, cameraVector, roughness, pixelSpecular);
+	diffuseTerm = ConserveDiffuseEnergy(diffuseTerm, specularTerm, metalness);
 
-	return (diffuseTerm + specularTerm) * pointLight.Color * pointLight.Intensity * Attenuate(pointLight, pixelData.worldPosition);
+	return (diffuseTerm * pixelColor + specularTerm) * lightColor *Attenuate(pointLight, pixelData.worldPosition);
 }
 
 #endif

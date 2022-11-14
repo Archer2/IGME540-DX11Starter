@@ -39,7 +39,7 @@ void Entity::Update(float deltaTime)
 	m_timeSinceCreation += deltaTime;
 
 	// Some dummy code - all Entities rotate a little bit around Y
-	m_transform.AddAbsoluteRotation(0.f, 0.f, XM_2PI * deltaTime / 16.f);
+	//m_transform.AddAbsoluteRotation(0.f, 0.f, XM_2PI * deltaTime / 16.f);
 }
 
 //-----------------------------------------------

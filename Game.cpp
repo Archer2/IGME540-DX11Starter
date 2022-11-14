@@ -123,13 +123,13 @@ void Game::LoadShaders()
 void Game::LoadGeometry()
 {
 	// Load default files provided in A6
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
-	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
+	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
 }
 
 // --------------------------------------------------------
@@ -151,7 +151,7 @@ void Game::GenerateEntities()
 	sky = std::make_shared<Sky>(
 		device,
 		geometry[0],
-		LoadTextureCube(L"../../assets/materials/skies/Planet"),
+		LoadTextureCube(L"../../assets/materials/skies/Clouds Blue"),
 		samplerState,
 		skyVertexShader,
 		skyPixelShader);
@@ -160,20 +160,21 @@ void Game::GenerateEntities()
 	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
 	//entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
-	// Generate a line of entities, 1 for each geometry
+	// Generate a line of entities, 1 for each geometry or material
 	float entityOffset = 4.f; // Offset of each entity from its neighbors
-	float xPosition = geometry.size() * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
-	for (int i = 0; i < geometry.size(); i++) {
+	float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
+	for (int i = 0; i < materials.size()-1; i++) {
 		xPosition += entityOffset; // Increment position for the line
 
 		// Create and edit entity
-		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
+		//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[0], materials[i]);
 		entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
 		entities.push_back(entity);
 	}
 
 	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
-	entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
+	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4); - No cube in use
 }
 
 // ----------------------------------------------------------
@@ -181,14 +182,22 @@ void Game::GenerateEntities()
 // ----------------------------------------------------------
 void Game::CreateMaterials()
 {
-	// Load some textures
+	// Default Textures
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultNormalSRV =
 		LoadTexture(L"../../assets/materials/flat_normals.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> fullNonMetalSRV =
+		LoadTexture(L"../../assets/materials/no_metal.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> fullMetalSRV =
+		LoadTexture(L"../../assets/materials/full_metal.png");
 
+	// Textures from AmbientCG.com
+	// - They have 2 normal maps - GL and DX. I assume that is OpenGL vs. DirectX for handedness, since the normals appear inverted
+	// - Surface color is NOT gamma-corrected, so "reversing" the auto gamma correction in the PS after sampling just makes the
+	//	 texture darker
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Color.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleNormalSRV =
-		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
+		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_NormalDX.png"); 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Marble023_1K/Marble023_1K_Roughness.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> marbleMetalnessSRV =
@@ -197,27 +206,57 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesSRV =
 		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Color.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesNormalSRV =
-		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
+		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_NormalDX.png"); 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesRoughnessSRV =
 		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalPlatesMetalnessSRV =
+		LoadTexture(L"../../assets/materials/MetalPlates006_1K/MetalPlates006_1K_Metalness.png");
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodSRV = 
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Color.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodNormalSRV =
-		LoadTexture(L"../../assets/materials//Wood058_1K//Wood058_1K_Normal_DX.png"); // Downloaded textures have 2 normal maps - 'DX' and 'GL', which I assume to be for either DirectX or OpenGL, since they are inverted from each other
+		LoadTexture(L"../../assets/materials//Wood058_1K//Wood058_1K_NormalDX.png"); 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Metalness.png");
 
-	// Provided textures with good normal maps
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
-	//	LoadTexture(L"../../assets/materials/Cobblestone/cobblestone.png");
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleNormalSRV =
-	//	LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_normals.png");
-	//
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionSRV =
-	//	LoadTexture(L"../../assets/materials/Cushion/cushion.png");
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionNormalSRV =
-	//	LoadTexture(L"../../assets/materials/Cushion/cushion_normals.png");
+	// Provided PBR textures
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_albedo.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleNormalSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_normals.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Cobblestone/cobblestone_metal.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bronzeSRV =
+		LoadTexture(L"../../assets/materials/Bronze/bronze_albedo.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bronzeNormalsSRV =
+		LoadTexture(L"../../assets/materials/Bronze/bronze_normals.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bronzeRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Bronze/bronze_roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bronzeMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Bronze/bronze_metal.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> paintSRV =
+		LoadTexture(L"../../assets/materials/Scratched/scratched_albedo.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> paintNormalsSRV =
+		LoadTexture(L"../../assets/materials/Scratched/scratched_normals.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> paintRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Scratched/scratched_roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> paintMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Scratched/scratched_metal.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> floorSRV =
+		LoadTexture(L"../../assets/materials/Floor/floor_albedo.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> floorNormalSRV =
+		LoadTexture(L"../../assets/materials/Floor/floor_normals.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> floorRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Floor/floor_roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> floorMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Floor/floor_metal.png");
 
 	// Create a Sampler state
 	D3D11_SAMPLER_DESC desc = {};
@@ -230,42 +269,73 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
 	device->CreateSamplerState(&desc, samplerState.GetAddressOf());
 
-	// Basic Pixel and Vertex Shaders (basic white color tint)
+	// Basic Pixel and Vertex Shader Materials (basic white color tint)
 	size_t counter = materials.size(); // Counter to access the materials vector at the new slot
 
+	// Marble
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
 	materials[counter]->AddTextureSRV("AlbedoTexture", marbleSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", (marbleNormalSRV != nullptr) ? marbleNormalSRV : defaultNormalSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", marbleNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", marbleRoughnessSRV);
-	materials[counter]->AddTextureSRV("MetalnessTexture", marbleMetalnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", (marbleMetalnessSRV != nullptr) ? marbleMetalnessSRV : fullNonMetalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++; // Increment counter to be in next Material's position
 	
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	//materials[counter]->AddTextureSRV("AlbedoTexture", metalPlatesSRV);
-	//materials[counter]->AddTextureSRV("NormalTexture", (metalPlatesNormalSRV != nullptr) ? metalPlatesNormalSRV : defaultNormalSRV);
-	//materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
-	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	// Metal Plates - possibly the only texture without gamma correction built in
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", metalPlatesSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", metalPlatesNormalSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", metalPlatesMetalnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
 	//materials[counter]->SetUVScale(.5f);
-	//counter++; // Increment counter for next Material
-	//
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	//materials[counter]->AddTextureSRV("AlbedoTexture", woodSRV);
-	//materials[counter]->AddTextureSRV("NormalTexture", (woodNormalSRV != nullptr) ? woodNormalSRV : defaultNormalSRV);
-	//materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
-	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
 	
-	// Provided textures provide good demonstration of normal maps
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	//materials[counter]->AddTextureSRV("AlbedoTexture", cobbleSRV);
-	//materials[counter]->AddTextureSRV("NormalTexture", cobbleNormalSRV);
-	//materials[counter]->AddSampler("BasicSampler", samplerState);
-	//counter++;
-	// 
-	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	//materials[counter]->AddTextureSRV("AlbedoTexture", cushionSRV);
-	//materials[counter]->AddTextureSRV("NormalTexture", cushionNormalSRV);
-	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	// Wood
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", woodSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", woodNormalSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", (woodMetalnessSRV != nullptr) ? woodMetalnessSRV : fullNonMetalSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
+	
+	// Cobblestone
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", cobbleSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", cobbleNormalSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", cobbleRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", cobbleMetalnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->SetUVScale(.5f);
+	counter++;
+	 
+	// Bronze
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", bronzeSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", bronzeNormalsSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", bronzeRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", bronzeMetalnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
+
+	// Scratched Paint
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", paintSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", paintNormalsSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", paintRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", paintMetalnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
+
+	// Metallic Casing
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", floorSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", floorNormalSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", floorRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", floorMetalnessSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->SetUVScale(.5f);
 	// No need to increment counter
 
 	// Procedural Pixel Shader
@@ -291,8 +361,12 @@ void Game::CreateLights()
 	pointLight1.Position = Vector3(2.f, 0.f, 0.f);
 	pointLight1.Range = 10.f;
 	pointLight1.Color = Vector3(1.f, 1.f, 1.f);
-	pointLight1.Intensity = .7f;
+	pointLight1.Intensity = 1.f;
 	pointLights.push_back(pointLight1);
+	std::shared_ptr<Entity> l1 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
+	l1->GetTransform()->SetAbsolutePosition(pointLight1.Position);
+	l1->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
+	entities.push_back(l1);
 
 	// White light to -X of the sphere
 	BasicLight pointLight2 = {};
@@ -300,8 +374,11 @@ void Game::CreateLights()
 	pointLight2.Position = Vector3(-2.f, 0.f, 0.f);
 	pointLight2.Range = 10.f;
 	pointLight2.Color = Vector3(1.f, 1.f, 1.f);
-	pointLight2.Intensity = .7f;
-	pointLights.push_back(pointLight2);
+	pointLight2.Intensity = 1.f;
+	pointLights.push_back(pointLight2);	std::shared_ptr<Entity> l2 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
+	l2->GetTransform()->SetAbsolutePosition(pointLight2.Position);
+	l2->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
+	entities.push_back(l2);
 }
 
 // ----------------------------------------------------------
@@ -543,10 +620,12 @@ void Game::UIEditorWindow()
 	float pointLight1Pos[3] = { pointLights[0].Position.x, pointLights[0].Position.y, pointLights[0].Position.z };
 	if (ImGui::SliderFloat3("Point Light 1 Position", &pointLight1Pos[0], -10, 10)) {
 		pointLights[0].Position = Vector3(pointLight1Pos[0], pointLight1Pos[1], pointLight1Pos[2]);
+		entities[entities.size() - 2]->GetTransform()->SetAbsolutePosition(pointLights[0].Position);
 	}
 	float pointLight2Pos[3] = { pointLights[1].Position.x, pointLights[1].Position.y, pointLights[1].Position.z };
 	if (ImGui::SliderFloat3("Point Light 2 Position", &pointLight2Pos[0], -10, 10)) {
 		pointLights[1].Position = Vector3(pointLight2Pos[0], pointLight2Pos[1], pointLight2Pos[2]);
+		entities[entities.size() - 1]->GetTransform()->SetAbsolutePosition(pointLights[1].Position);
 	}
 
 	ImGui::End();
