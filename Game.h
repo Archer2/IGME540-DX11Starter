@@ -63,10 +63,12 @@ private:
 	std::shared_ptr<Camera> camera;
 	
 	// Shaders and shader-related constructs
+	std::shared_ptr<SimpleVertexShader> vertexShader;
 	std::shared_ptr<SimplePixelShader> pixelShader;
 	std::shared_ptr<SimplePixelShader> customPixelShader;
-	std::shared_ptr<SimpleVertexShader> vertexShader;
 	std::shared_ptr<SimpleVertexShader> skyVertexShader; 
 	std::shared_ptr<SimplePixelShader> skyPixelShader;
+	std::shared_ptr<SimpleVertexShader> irradianceVertexShader;
+	std::shared_ptr<SimplePixelShader> irradiancePixelShader;
 };
 

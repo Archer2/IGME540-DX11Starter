@@ -115,6 +115,8 @@ void Game::LoadShaders()
 	customPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"ProceduralPixelShader.cso").c_str());
 	skyVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"SkyVertexShader.cso").c_str());
 	skyPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"SkyPixelShader.cso").c_str());
+	irradianceVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"IBLIrradianceMapVS.cso").c_str());
+	irradiancePixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBLIrradianceMapPS.cso").c_str());
 }
 
 // --------------------------------------------------------
@@ -215,11 +217,20 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodSRV = 
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Color.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodNormalSRV =
-		LoadTexture(L"../../assets/materials//Wood058_1K//Wood058_1K_NormalDX.png"); 
+		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_NormalDX.png"); 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodRoughnessSRV =
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Roughness.png");
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodMetalnessSRV =
 		LoadTexture(L"../../assets/materials/Wood058_1K/Wood058_1K_Metalness.png");
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalSRV =
+		LoadTexture(L"../../assets/materials/Metal032_1K/Metal032_1K_Color.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalNormalSRV =
+		LoadTexture(L"../../assets/materials/Metal032_1K/Metal032_1K_NormalDX.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalRoughnessSRV =
+		LoadTexture(L"../../assets/materials/Metal032_1K/Metal032_1K_Roughness.png");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMetalnessSRV =
+		LoadTexture(L"../../assets/materials/Metal032_1K/Metal032_1K_Metalness.png");
 
 	// Provided PBR textures
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobbleSRV =
@@ -282,14 +293,14 @@ void Game::CreateMaterials()
 	counter++; // Increment counter to be in next Material's position
 	
 	// Metal Plates - possibly the only texture without gamma correction built in
-	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
-	materials[counter]->AddTextureSRV("AlbedoTexture", metalPlatesSRV);
-	materials[counter]->AddTextureSRV("NormalTexture", metalPlatesNormalSRV);
-	materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
-	materials[counter]->AddTextureSRV("MetalnessTexture", metalPlatesMetalnessSRV);
-	materials[counter]->AddSampler("BasicSampler", samplerState);
-	//materials[counter]->SetUVScale(.5f);
-	counter++;
+	//materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	//materials[counter]->AddTextureSRV("AlbedoTexture", metalPlatesSRV);
+	//materials[counter]->AddTextureSRV("NormalTexture", metalPlatesNormalSRV);
+	//materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
+	//materials[counter]->AddTextureSRV("MetalnessTexture", metalPlatesMetalnessSRV);
+	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	////materials[counter]->SetUVScale(.5f);
+	//counter++;
 	
 	// Wood
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
@@ -300,6 +311,15 @@ void Game::CreateMaterials()
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++;
 	
+	// Metal
+	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
+	materials[counter]->AddTextureSRV("AlbedoTexture", metalSRV);
+	materials[counter]->AddTextureSRV("NormalTexture", metalNormalSRV);
+	materials[counter]->AddTextureSRV("RoughnessTexture", metalRoughnessSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", (metalMetalnessSRV != nullptr) ? metalMetalnessSRV : fullNonMetalSRV);
+	materials[counter]->AddSampler("BasicSampler", samplerState);
+	counter++;
+
 	// Cobblestone
 	materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 0.f));
 	materials[counter]->AddTextureSRV("AlbedoTexture", cobbleSRV);

@@ -1,6 +1,8 @@
 #ifndef _SHADER_COMMON_INCLUDES_
 #define _SHADER_COMMON_INCLUDES_
 
+#include "Hammersley.hlsli"
+
 // Macros describing type integers for BasicLight Types
 // - Must match LightType enum definition in Lights.h in C++
 #define LIGHT_TYPE_DIRECTIONAL 0;
@@ -208,5 +210,9 @@ float3 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pix
 
 	return (diffuseTerm * pixelColor + specularTerm) * lightColor *Attenuate(pointLight, pixelData.worldPosition);
 }
+
+// ----------------------------- PBR IBL ----------------------------------------------
+
+
 
 #endif
