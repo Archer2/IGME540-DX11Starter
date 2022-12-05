@@ -71,6 +71,12 @@ void Game::Init()
 	// Seed Standard Random Number generator
 	std::srand((unsigned int)std::time(0));
 
+	// Tell the input assembler (IA) stage of the pipeline what kind of
+	// geometric primitives (points, lines or triangles) we want to draw.  
+	// Essentially: "What kind of shape should the GPU draw with our vertices?"
+	//	- Moved here to be set before the Skybox is generated, for Irradiance calculation
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 	// Set up ImGUI
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -93,11 +99,6 @@ void Game::Init()
 	cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
 	camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camear rotation
-
-	// Tell the input assembler (IA) stage of the pipeline what kind of
-	// geometric primitives (points, lines or triangles) we want to draw.  
-	// Essentially: "What kind of shape should the GPU draw with our vertices?"
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 // --------------------------------------------------------
@@ -157,6 +158,7 @@ void Game::GenerateEntities()
 		samplerState,
 		skyVertexShader,
 		skyPixelShader);
+	sky->CreateEnvironmentMap(device, context, irradianceVertexShader, irradiancePixelShader);
 
 	// Generate a fancy cube just above world origin
 	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));

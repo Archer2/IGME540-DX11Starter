@@ -14,11 +14,13 @@
 class Sky
 {
 public:
-	Sky(Microsoft::WRL::ComPtr<ID3D11Device> a_device, std::shared_ptr<Mesh> a_mesh, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> a_cubemap, 
+	Sky(Microsoft::WRL::ComPtr<ID3D11Device> a_device, std::shared_ptr<Mesh> a_mesh, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> a_cubemap,
 		Microsoft::WRL::ComPtr<ID3D11SamplerState> a_sampler, std::shared_ptr<SimpleVertexShader> a_vertShader, std::shared_ptr<SimplePixelShader> a_pixelShader);
 	~Sky();
 
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera);
+
+	void CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_context, std::shared_ptr<SimpleVertexShader> a_irradianceVS, std::shared_ptr<SimplePixelShader> a_irradiancePS);
 
 	// Setters
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> a_samplerState);
@@ -38,6 +40,8 @@ public:
 	std::shared_ptr<SimpleVertexShader> GetVertexShader();
 	std::shared_ptr<SimplePixelShader> GetPixelShader();
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetEnvironmentMap();
+
 protected:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState; // Texture Sampler
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_cubeMap; // Texture Cube
@@ -46,5 +50,7 @@ protected:
 	std::shared_ptr<Mesh> m_skyMesh; // Actual mesh to render as the sky
 	std::shared_ptr<SimpleVertexShader> m_vertexShader; // Sky-specific shader
 	std::shared_ptr<SimplePixelShader> m_pixelShader; // Sky-specific shader
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_envMap; // Texture Cube holding the Sky's irradiance map
 };
 
