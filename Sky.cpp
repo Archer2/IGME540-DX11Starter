@@ -82,43 +82,41 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texCube = static_cast<ID3D11Texture2D*>(resource.Get()); // Actual Sky TexCube
 	texCube->GetDesc(&skyTextureDesc);
 
-	// Create the Description of a face Texture
-	D3D11_TEXTURE2D_DESC faceTextureDesc = {};
-	faceTextureDesc.Format = skyTextureDesc.Format;
-	faceTextureDesc.Width = skyTextureDesc.Width;
-	faceTextureDesc.Height = skyTextureDesc.Height;
-	faceTextureDesc.ArraySize = 1; // A Face is not an array
-	faceTextureDesc.MipLevels = 1; // A Face only needs 1 Mip Level
-	faceTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET; // Resource to be used in a Shader AND Render Target
-	faceTextureDesc.SampleDesc.Count = 1;
-	faceTextureDesc.SampleDesc.Quality = 0;
+	// Possibly shrink width/height of skyTextureDesc - efficiency
+	skyTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
 	// Create Irradiance Cube
-	a_device->CreateTexture2D(&skyTextureDesc, nullptr, texCube.GetAddressOf()); // texCube can be reused
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> irrMap;
+	a_device->CreateTexture2D(&skyTextureDesc, nullptr, irrMap.GetAddressOf());
 
 	// Save back buffer Render Target and Viewport so that it can be replaced after Textures are drawn
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
 	a_context->OMGetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.GetAddressOf());
 
+	// Turn off Vertex and Input Buffers
+	a_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+	UINT stride = sizeof(Vertex); // Stride of everything else being drawn?
+	UINT offset = 0;
+	ID3D11Buffer* nullBuffer = nullptr; // Must pass address of nullptr to clear, not nullptr itself
+	a_context->IASetVertexBuffers(0, 1, &nullBuffer, &stride, &offset);
+
 	// Create the Texture Cube
 	for (int i = 0; i < 6; i++) {
-		// Create a Texture
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> faceTexture;
-		a_device->CreateTexture2D(&faceTextureDesc, nullptr, faceTexture.GetAddressOf());
+		D3D11_RENDER_TARGET_VIEW_DESC viewDesc = {};
+		viewDesc.Format = skyTextureDesc.Format;
+		viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+		viewDesc.Texture2DArray.MipSlice = 0;
+		viewDesc.Texture2DArray.ArraySize = 1;
+		viewDesc.Texture2DArray.FirstArraySlice = i;
 
-		// Dispatch a Draw Call with that Texture as the Render Target
-		// Turn off Vertex and Input Buffers
-		a_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
-		UINT stride = sizeof(Vertex); // Stride of everything else being drawn?
-		UINT offset = 0;
-		ID3D11Buffer* nullBuffer = nullptr; // Must pass address of nullptr to clear, not nullptr itself
-		a_context->IASetVertexBuffers(0, 1, &nullBuffer, &stride, &offset);
-		
+		// Dispatch a Draw Call with that Texture as the Render Target		
+		// Render Target for texture face
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> faceRTV;
-		a_device->CreateRenderTargetView(faceTexture.Get(), nullptr, faceRTV.GetAddressOf());
+		a_device->CreateRenderTargetView(irrMap.Get(), &viewDesc, faceRTV.GetAddressOf());
 		a_context->OMSetRenderTargets(1, faceRTV.GetAddressOf(), nullptr);
 
+		// Set shaders and data
 		float phiStep = 0.025f, thetaStep = 0.025f;
 		a_irradianceVS->SetShader();
 		a_irradiancePS->SetShader();
@@ -132,6 +130,7 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 		a_context->Draw(3, 0); // Draw with 3 vertices (full-screen triangle)
 		 
 		// Save that Texture to the Cubemap subresource
+
 	}
 
 	// Reset Render Target

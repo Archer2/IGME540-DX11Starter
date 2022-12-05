@@ -98,7 +98,7 @@ void Game::Init()
 	cameraTransform.SetAbsolutePosition(0.f, 0.f, 15.f);
 	cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
-	camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camear rotation
+	camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camera rotation
 }
 
 // --------------------------------------------------------
