@@ -318,7 +318,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("AlbedoTexture", metalSRV);
 	materials[counter]->AddTextureSRV("NormalTexture", metalNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", metalRoughnessSRV);
-	materials[counter]->AddTextureSRV("MetalnessTexture", /*(metalMetalnessSRV != nullptr) ? metalMetalnessSRV : */ fullNonMetalSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", /*(metalMetalnessSRV != nullptr) ? metalMetalnessSRV : */ fullNonMetalSRV); // Uses full non-metal for IBL testing
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++;
 

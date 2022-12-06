@@ -82,8 +82,8 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texCube = static_cast<ID3D11Texture2D*>(resource.Get()); // Actual Sky TexCube
 	texCube->GetDesc(&skyTextureDesc);
 
-	skyTextureDesc.Width /= 2;
-	skyTextureDesc.Height /= 2;
+	skyTextureDesc.Width /= 16;  // Width and height can be massively reduced, because there is very little detail in the 
+	skyTextureDesc.Height /= 16; // irradiance map. Assuming a minimum Skybox dimension of 1024x1024, the result will be 64x64
 	skyTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
 	// Create Irradiance Cube
@@ -128,7 +128,7 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 		a_context->OMSetRenderTargets(1, faceRTV.GetAddressOf(), nullptr);
 
 		// Set shaders and data
-		float phiStep = 0.25f /*0.025f*/, thetaStep = 0.25f /*0.025f*/;
+		float phiStep = 0.025f, thetaStep = 0.025f;
 		a_irradianceVS->SetShader();
 		a_irradiancePS->SetShader();
 		a_irradiancePS->SetShaderResourceView("EnvMap", m_cubeMap); // Environment is this Sky

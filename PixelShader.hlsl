@@ -53,8 +53,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 	input.uv += c_uvOffset;
 
 	// Calculate basic color and modifiers from Textures
-	float3 albedoColor = (c_color * AlbedoTexture.Sample(BasicSampler, input.uv)).rgb; // Alpha channel is unused here
-	albedoColor = pow(albedoColor, 2.2f); // Reverse embedded image Gamma Correction before lighting is applied (only done for surface color texture)
+	float3 albedoColor = AlbedoTexture.Sample(BasicSampler, input.uv).rgb; // Alpha channel is unused here
+	albedoColor = pow(albedoColor, 2.2f) * c_color.rgb; // Reverse embedded image Gamma Correction before lighting is applied (only done for surface color texture)
 
 	float roughnessValue = RoughnessTexture.Sample(BasicSampler, input.uv).r; // Possibly should be saturated
 	float metalnessValue = MetalnessTexture.Sample(BasicSampler, input.uv).r; // Probably should be saturated
@@ -84,9 +84,17 @@ float4 main(VertexToPixel input) : SV_TARGET
 			c_pointLights[j], input, cameraVector, roughnessValue, metalnessValue, specularColor, albedoColor);
 	}
 
-	float3 indirectDiffuse = pow(pow(abs(IrradianceMap.Sample(BasicSampler, input.normal).rgb), 2.2f), 2.2);
+	// Calculate IBL Light
+	float3 indirectDiffuse = pow(abs(IrradianceMap.Sample(BasicSampler, input.normal).rgb), 2.2f);
 	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
 
-	float3 finalLight = directionalLightSum + pointLightSum + indirectDiffuse;
+	float3 indirectSum = indirectDiffuse * albedoColor;
+
+	// Demo Indirect Diffuse Lighting
+	//return float4(pow(indirectDiffuse, 1.0f / 2.2f), 1.f);
+	//return float4(pow(indirectSum, 1.0f / 2.2f), 1.f);
+
+	// Calculate and return final light
+	float3 finalLight = directionalLightSum + pointLightSum + indirectSum;
 	return float4(pow(finalLight, 1.0f/2.2f), 1.f); // Apply Gamma Correction, and set the Alpha value to 1 (since it doesn't matter)
 }
