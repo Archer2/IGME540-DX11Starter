@@ -77,7 +77,7 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 	m_cubeMap->GetDesc(&skyCubeDesc);
 
 	Microsoft::WRL::ComPtr<ID3D11Resource> resource = {};
-	D3D11_TEXTURE2D_DESC skyTextureDesc;
+	D3D11_TEXTURE2D_DESC skyTextureDesc; // Description of the Sky CubeMap
 	m_cubeMap->GetResource(resource.GetAddressOf());
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texCube = static_cast<ID3D11Texture2D*>(resource.Get()); // Actual Sky TexCube
 	texCube->GetDesc(&skyTextureDesc);
@@ -128,7 +128,7 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 		a_context->OMSetRenderTargets(1, faceRTV.GetAddressOf(), nullptr);
 
 		// Set shaders and data
-		float phiStep = 0.025f, thetaStep = 0.025f;
+		float phiStep = 0.05f /*0.025f*/, thetaStep = 0.05f /*0.025f*/; // Adjust for hardware, or alternatively adjust dimensions
 		a_irradianceVS->SetShader();
 		a_irradiancePS->SetShader();
 		a_irradiancePS->SetShaderResourceView("EnvMap", m_cubeMap); // Environment is this Sky
