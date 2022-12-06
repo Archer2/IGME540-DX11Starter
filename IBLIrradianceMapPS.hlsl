@@ -33,7 +33,7 @@ SamplerState Sampler : register(s0);
 float4 main(VertexToPixel input) : SV_TARGET
 {
 	float2 uv = input.UV * 2.f - 1.f; // Unpack to [1,-1] range for a plane
-	float3 direction = float3(uv, 1.f);
+	float3 direction = float3(uv.x, -uv.y, 1.f);
 
 	// Switch on the Face index to rearrange Normal components
 	// to be appropriate to that face (default is FRONT (+Z))
@@ -63,12 +63,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 		break;
 	case 5: // -Z, z becomes -z
 		direction.z = -direction.z;
+		direction.x = -direction.x;
 		break;
 	default: return float4(1.f, 1.f, 1.f, 1.f); // Error color returned
 	}
 	direction = normalize(direction); // normal at this point has magnitude 1
-
-	// Loop around the Hemisphere - 180deg by 180deg
+	float3 tangent = cross(float3(0, 1, 0), direction); // X-direction, should already be normalized
+	float3 bitangent = cross(direction, tangent); // Y-direction, should be normalized
 
 	float3 totalColor = float3(0.f, 0.f, 0.f);
 	int samples = 0;
@@ -78,23 +79,23 @@ float4 main(VertexToPixel input) : SV_TARGET
 	// Loop around each angle of the hemisphere, using spherical coordinates to identify a
 	// "position" at radius 1. This can be used as a direction by treating the hemisphere as
 	// centered at 0. The final "pixel" direction is 'normalize(hemisphericalCoords + direction)'
-	for (float theta = 0.0f; theta < PI; theta += c_thetaStep) 
+	for (float theta = 0.0f; theta < PI * 2.f; theta += c_thetaStep) 
 	{
 		sincos(theta, sinTheta, cosTheta);
 
-		for (float phi = 0.0f; phi < PI; phi += c_phiStep) 
+		for (float phi = 0.0f; phi < PI / 2.f; phi += c_phiStep) 
 		{
 			sincos(phi, sinPhi, cosPhi);
 			
 			// Spherical coordinates, r = 1
-			float3 hemisphericalCoords = float3(cosTheta * sinPhi, sinTheta * sinPhi, cosPhi);
-			direction = normalize(hemisphericalCoords + direction);
-
-			totalColor += pow(EnvMap.Sample(Sampler, direction).rgb, 2.2); // Apply gamma correction
+			float3 hemisphereCoords = normalize(float3(cosTheta * sinPhi, sinTheta * sinPhi, cosPhi));
+			float3 iterDir = hemisphereCoords.x * tangent + hemisphereCoords.y * bitangent + hemisphereCoords.z * direction;
+				//normalize(hemisphereCoords + direction);
+			totalColor += pow(EnvMap.Sample(Sampler, iterDir).rgb, 2.2) * cos(phi) * sin(phi); // Apply gamma correction
 			samples++;
 		}
 	}
 
-	totalColor = PI * totalColor / samples; // why PI?
+	totalColor = PI * totalColor / samples;
 	return float4(pow(totalColor, 1.f / 2.2f), 1.f);
 }

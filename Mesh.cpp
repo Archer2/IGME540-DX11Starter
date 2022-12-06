@@ -325,11 +325,11 @@ UINT Mesh::GetIndexCount()
 void Mesh::CalculateTangents(Vertex* a_vertices, UINT a_vertexCount, UINT* a_indices, UINT a_indexCount)
 {
 	// Reset tangents
-	for (int i = 0; i < a_vertexCount; i++) {
+	for (UINT i = 0; i < a_vertexCount; i++) {
 		a_vertices[i].Tangent = DirectX::XMFLOAT3(0, 0, 0);
 	}
 	// Calculate tangents one whole triangle at a time
-	for (int i = 0; i < a_indexCount;) {
+	for (UINT i = 0; i < a_indexCount;) {
 		// Grab indices and vertices of first triangle
 		unsigned int i1 = a_indices[i++];
 		unsigned int i2 = a_indices[i++];
@@ -366,7 +366,7 @@ void Mesh::CalculateTangents(Vertex* a_vertices, UINT a_vertexCount, UINT* a_ind
 		v3->Tangent.z += tz;
 	}
 	// Ensure all of the tangents are orthogonal to the normals
-	for (int i = 0; i < a_vertexCount; i++) {
+	for (UINT i = 0; i < a_vertexCount; i++) {
 		// Grab the two vectors
 		DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&a_vertices[i].Normal);
 		DirectX::XMVECTOR tangent = DirectX::XMLoadFloat3(&a_vertices[i].Tangent);

@@ -318,7 +318,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("AlbedoTexture", metalSRV);
 	materials[counter]->AddTextureSRV("NormalTexture", metalNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", metalRoughnessSRV);
-	materials[counter]->AddTextureSRV("MetalnessTexture", (metalMetalnessSRV != nullptr) ? metalMetalnessSRV : fullNonMetalSRV);
+	materials[counter]->AddTextureSRV("MetalnessTexture", /*(metalMetalnessSRV != nullptr) ? metalMetalnessSRV : */ fullNonMetalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	counter++;
 
@@ -730,17 +730,23 @@ void Game::Draw(float deltaTime, float totalTime)
 	for (std::shared_ptr<Entity> entity : entities) {
 		std::shared_ptr<SimplePixelShader> pixelShader = entity->GetMaterial()->GetPixelShader();
 
-		// Set Light Data - Unsustainable for large numbers of lights - create 1+ arrays in Shader
+		// Set Light Data
 		int directionalLightCount = (int)directionalLights.size();
 		int pointLightCount = (int)pointLights.size();
+		// Directionals
 		if (pixelShader->HasVariable("c_directionalLights"))
 			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * directionalLightCount);
 		if (pixelShader->HasVariable("c_directionalLightCount"))
 			pixelShader->SetInt("c_directionalLightCount", directionalLightCount);
+		// Points
 		if (pixelShader->HasVariable("c_pointLights"))
 			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * pointLightCount);
 		if (pixelShader->HasVariable("c_pointLightCount"))
 			pixelShader->SetInt("c_pointLightCount", pointLightCount);
+
+		// Set Irradiance map
+		if (pixelShader->HasShaderResourceView("IrradianceMap"))
+			pixelShader->SetShaderResourceView("IrradianceMap", sky->GetEnvironmentMap());
 
 		// Draw Entity
 		entity->Draw(context, camera);

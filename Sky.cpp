@@ -82,7 +82,8 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texCube = static_cast<ID3D11Texture2D*>(resource.Get()); // Actual Sky TexCube
 	texCube->GetDesc(&skyTextureDesc);
 
-	// Possibly shrink width/height of skyTextureDesc - efficiency
+	skyTextureDesc.Width /= 2;
+	skyTextureDesc.Height /= 2;
 	skyTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 
 	// Create Irradiance Cube
@@ -93,6 +94,16 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
 	a_context->OMGetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.GetAddressOf());
+	UINT viewportCount = 1;
+	D3D11_VIEWPORT cachedViewport;
+	a_context->RSGetViewports(&viewportCount, &cachedViewport);
+	
+	// Reset viewPort to skyTexture dimensions
+	D3D11_VIEWPORT textureViewport = {};
+	textureViewport.MaxDepth = 1.f;
+	textureViewport.Width = (FLOAT)skyTextureDesc.Width;
+	textureViewport.Height = (FLOAT)skyTextureDesc.Height;
+	a_context->RSSetViewports(1, &textureViewport);
 
 	// Turn off Vertex and Input Buffers
 	a_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
@@ -117,7 +128,7 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 		a_context->OMSetRenderTargets(1, faceRTV.GetAddressOf(), nullptr);
 
 		// Set shaders and data
-		float phiStep = 0.025f, thetaStep = 0.025f;
+		float phiStep = 0.25f /*0.025f*/, thetaStep = 0.25f /*0.025f*/;
 		a_irradianceVS->SetShader();
 		a_irradiancePS->SetShader();
 		a_irradiancePS->SetShaderResourceView("EnvMap", m_cubeMap); // Environment is this Sky
@@ -128,13 +139,14 @@ void Sky::CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Mi
 		a_irradiancePS->CopyAllBufferData();
 
 		a_context->Draw(3, 0); // Draw with 3 vertices (full-screen triangle)
-		 
-		// Save that Texture to the Cubemap subresource
-
 	}
 
-	// Reset Render Target
+	// Create the SRV for the Irradiance Map
+	a_device->CreateShaderResourceView(irrMap.Get(), &skyCubeDesc, m_envMap.GetAddressOf());
+
+	// Reset Render Target and Viewport
 	a_context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	a_context->RSSetViewports(1, &cachedViewport);
 }
 
 //-------------------------------------------------------

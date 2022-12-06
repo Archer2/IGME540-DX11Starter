@@ -165,7 +165,7 @@ float3 ConserveDiffuseEnergy(float3 diffuseLight, float3 specularLight, float me
 	return diffuseLight * ((1 - saturate(specularLight)) * (1 - metalness));
 }
 
-// Calculate Diffuse and Specular Terms for a single Directional Light
+// Calculate PBR Diffuse and Specular Terms for a single Directional Light
 //	- directionalLight: directional Light to calculate lighting for
 //	- pixelData: all pixel data for this pixel, easier than passing individual data
 //	- cameraPosition: world position of the euepoint
@@ -188,7 +188,7 @@ float3 CalculateDirectionalLightDiffuseAndSpecular(Light directionalLight, Verte
 	return (diffuseTerm * pixelColor + specularTerm) * lightColor;
 }
 
-// Calculate Diffuse and Specular Terms for a single Directional Light
+// Calculate PBR Diffuse and Specular Terms for a single Directional Light
 //	- pointLight: point Light to calculate lighting for
 //	- pixelData: all pixel data for this pixel, easier than passing individual data
 //	- cameraPosition: world position of the euepoint
@@ -208,7 +208,7 @@ float3 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pix
 	float3 specularTerm = MicrofacetBRDF(pixelData.normal, lightDirection, cameraVector, roughness, pixelSpecular);
 	diffuseTerm = ConserveDiffuseEnergy(diffuseTerm, specularTerm, metalness);
 
-	return (diffuseTerm * pixelColor + specularTerm) * lightColor *Attenuate(pointLight, pixelData.worldPosition);
+	return (diffuseTerm * pixelColor + specularTerm) * lightColor * Attenuate(pointLight, pixelData.worldPosition);
 }
 
 // ----------------------------- PBR IBL ----------------------------------------------

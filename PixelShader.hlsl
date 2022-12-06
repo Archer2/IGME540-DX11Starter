@@ -28,6 +28,8 @@ Texture2D NormalTexture : register(t1); // Normal Map
 Texture2D RoughnessTexture : register(t2); // PBR Roughness Map
 Texture2D MetalnessTexture : register(t3); // PBR Metalness Map
 
+TextureCube IrradianceMap : register(t4); // IBL Irradiance Map for Diffuse Light
+
 SamplerState BasicSampler : register(s0); // s registers for samplers
 
 // --------------------------------------------------------
@@ -65,23 +67,26 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 biTangent = cross(input.normal, input.tangent);
 	float3x3 TBN = float3x3(input.tangent, biTangent, input.normal);
 	input.normal = mul(normalize(unpackedNormal), TBN);
-	
+
 	float3 cameraVector = normalize(c_cameraPosition - input.worldPosition); // Normalized vector from Pixel to Camera
 
-	// Sum Directional Light calculations
+	// Sum Directional Light calculations - PBR
 	float3 directionalLightSum = float3(0.f, 0.f, 0.f);
 	for (int i = 0; i < c_directionalLightCount; i++) {
 		directionalLightSum += CalculateDirectionalLightDiffuseAndSpecular(
 			c_directionalLights[i], input, cameraVector, roughnessValue, metalnessValue, specularColor, albedoColor);
 	}
 
-	// Sum Point Light calculations
+	// Sum Point Light calculations - PBR
 	float3 pointLightSum = float3(0.f, 0.f, 0.f);
 	for (int j = 0; j < c_pointLightCount; j++) {
 		pointLightSum += CalculatePointLightDiffuseAndSpecular(
 			c_pointLights[j], input, cameraVector, roughnessValue, metalnessValue, specularColor, albedoColor);
 	}
 
-	float3 finalLight = directionalLightSum + pointLightSum;
+	float3 indirectDiffuse = pow(pow(abs(IrradianceMap.Sample(BasicSampler, input.normal).rgb), 2.2f), 2.2);
+	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
+
+	float3 finalLight = directionalLightSum + pointLightSum + indirectDiffuse;
 	return float4(pow(finalLight, 1.0f/2.2f), 1.f); // Apply Gamma Correction, and set the Alpha value to 1 (since it doesn't matter)
 }
