@@ -95,10 +95,11 @@ void Game::Init()
 
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
-	cameraTransform.SetAbsolutePosition(0.f, 0.f, 15.f);
+	cameraTransform.SetAbsolutePosition(0.f, 1.5f, -10.f); // Rearranged for Final demo scene
 	cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
-	camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camera rotation
+	//camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camera rotation
+	camera->AddCameraRotation(DirectX::XMConvertToRadians(12.f), 0.f, 0.f); // Final Demo scene camera pos
 }
 
 // --------------------------------------------------------
@@ -126,12 +127,12 @@ void Game::LoadShaders()
 void Game::LoadGeometry()
 {
 	// Load default files provided in A6
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
 	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
 	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
 	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
 }
 
@@ -165,16 +166,83 @@ void Game::GenerateEntities()
 	//entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
 	// Generate a line of entities, 1 for each geometry or material
-	float entityOffset = 4.f; // Offset of each entity from its neighbors
-	float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
-	for (int i = 0; i < materials.size()-1; i++) {
-		xPosition += entityOffset; // Increment position for the line
+	//float entityOffset = 4.f; // Offset of each entity from its neighbors
+	//float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
+	//for (int i = 0; i < materials.size()-1; i++) {
+	//	xPosition += entityOffset; // Increment position for the line
+	//
+	//	// Create and edit entity
+	//	//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
+	//	std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[0], materials[i]);
+	//	entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
+	//	entities.push_back(entity);
+	//}
 
-		// Create and edit entity
-		//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
-		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[0], materials[i]);
-		entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
-		entities.push_back(entity);
+	// Create Entities for a screne of a simple room and table - Final Demo
+	{
+		int counter = 0; // Counter for current Entity
+		// Floor
+		entities.push_back(std::make_shared<Entity>(geometry[3], materials[3]));
+		entities[counter]->GetTransform()->AddAbsolutePosition(0, -1, 0);
+		entities[counter]->GetTransform()->SetAbsoluteScale(3.25, 1, 4.25);
+
+		// Columns
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3, .25, -4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3, .25, -4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3, .25, 4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3, .25, 4);
+
+		// Spheres
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3, 1.75, -4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3, 1.75, -4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3, 1.75, 4);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3, 1.75, 4);
+
+		// Table
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
+		entities[counter]->GetTransform()->SetAbsolutePosition(1, -.75, -1.5);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-1, -.75, -1.5);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
+		entities[counter]->GetTransform()->SetAbsolutePosition(1, -.75, 1.5);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-1, -.75, 1.5);
+		counter++;
+		entities.push_back(std::make_shared<Entity>(geometry[0], materials[0]));
+		entities[counter]->GetTransform()->SetAbsoluteScale(1.3, .03, 1.8);
+		entities[counter]->GetTransform()->SetAbsolutePosition(0, -.5, 0);
 	}
 
 	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
@@ -329,7 +397,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", cobbleRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", cobbleMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
-	materials[counter]->SetUVScale(.5f);
+	materials[counter]->SetUVScale(.25f); // .5 looks good. .25 for Final Demo scene
 	counter++;
 	 
 	// Bronze
@@ -348,6 +416,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", paintRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", paintMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->SetUVScale(.75); // Set for Final Demo scene
 	counter++;
 
 	// Metallic Casing
@@ -376,46 +445,48 @@ void Game::CreateLights()
 	sunLight.Color = Vector3(0.89f, 0.788f, 0.757f);
 	sunLight.Intensity = 2.f;
 	directionalLights.push_back(sunLight);
+	
+	// Other lights are removed to show off the IBL Diffuse lighting. Sunlight remains because it looks natural
 
 	// Add a couple lights facing opposite the sun to remove extensive shadows
-	BasicLight backLight1 = {};
-	backLight1.Type = LightType::Directional;
-	backLight1.Direction = Vector3(.5f, .2f, 1.f); // Will be normalized in shader anyways
-	backLight1.Color = Vector3(0.89f, 0.788f, 0.757f);
-	backLight1.Intensity = 1.f;
-	directionalLights.push_back(backLight1);
-
-	BasicLight backLight2 = {};
-	backLight2.Type = LightType::Directional;
-	backLight2.Direction = Vector3(-.5f, -.6f, 1.f); // Will be normalized in shader anyways
-	backLight2.Color = Vector3(0.89f, 0.788f, 0.757f);
-	backLight2.Intensity = 1.f;
-	directionalLights.push_back(backLight2);
-
-	// White light to +X of the sphere
-	BasicLight pointLight1 = {};
-	pointLight1.Type = LightType::Directional;
-	pointLight1.Position = Vector3(2.f, 0.f, 0.f);
-	pointLight1.Range = 10.f;
-	pointLight1.Color = Vector3(1.f, 1.f, 1.f);
-	pointLight1.Intensity = 1.f;
-	pointLights.push_back(pointLight1);
-	std::shared_ptr<Entity> l1 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
-	l1->GetTransform()->SetAbsolutePosition(pointLight1.Position);
-	l1->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
-	entities.push_back(l1);
-
-	// White light to -X of the sphere
-	BasicLight pointLight2 = {};
-	pointLight2.Type = LightType::Directional;
-	pointLight2.Position = Vector3(-2.f, 0.f, 0.f);
-	pointLight2.Range = 10.f;
-	pointLight2.Color = Vector3(1.f, 1.f, 1.f);
-	pointLight2.Intensity = 1.f;
-	pointLights.push_back(pointLight2);	std::shared_ptr<Entity> l2 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
-	l2->GetTransform()->SetAbsolutePosition(pointLight2.Position);
-	l2->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
-	entities.push_back(l2);
+	//BasicLight backLight1 = {};
+	//backLight1.Type = LightType::Directional;
+	//backLight1.Direction = Vector3(.5f, .2f, 1.f); // Will be normalized in shader anyways
+	//backLight1.Color = Vector3(0.89f, 0.788f, 0.757f);
+	//backLight1.Intensity = 1.f;
+	//directionalLights.push_back(backLight1);
+	//
+	//BasicLight backLight2 = {};
+	//backLight2.Type = LightType::Directional;
+	//backLight2.Direction = Vector3(-.5f, -.6f, 1.f); // Will be normalized in shader anyways
+	//backLight2.Color = Vector3(0.89f, 0.788f, 0.757f);
+	//backLight2.Intensity = 1.f;
+	//directionalLights.push_back(backLight2);
+	//
+	//// White light to +X of the sphere
+	//BasicLight pointLight1 = {};
+	//pointLight1.Type = LightType::Directional;
+	//pointLight1.Position = Vector3(2.f, 0.f, 0.f);
+	//pointLight1.Range = 10.f;
+	//pointLight1.Color = Vector3(1.f, 1.f, 1.f);
+	//pointLight1.Intensity = 1.f;
+	//pointLights.push_back(pointLight1);
+	//std::shared_ptr<Entity> l1 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
+	//l1->GetTransform()->SetAbsolutePosition(pointLight1.Position);
+	//l1->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
+	//entities.push_back(l1);
+	//
+	//// White light to -X of the sphere
+	//BasicLight pointLight2 = {};
+	//pointLight2.Type = LightType::Directional;
+	//pointLight2.Position = Vector3(-2.f, 0.f, 0.f);
+	//pointLight2.Range = 10.f;
+	//pointLight2.Color = Vector3(1.f, 1.f, 1.f);
+	//pointLight2.Intensity = 1.f;
+	//pointLights.push_back(pointLight2);	std::shared_ptr<Entity> l2 = std::make_shared<Entity>(geometry[0], materials[materials.size() - 1]);
+	//l2->GetTransform()->SetAbsolutePosition(pointLight2.Position);
+	//l2->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
+	//entities.push_back(l2);
 }
 
 // ----------------------------------------------------------
@@ -577,7 +648,7 @@ void Game::UpdateUI(float deltaTime)
 	// Show windows
 	//ImGui::ShowDemoWindow();
 	UIStatsWindow();
-	UIEditorWindow();
+	//UIEditorWindow(); Easier to comment out the whole window than to update it to ignore the now-missing point lights
 }
 
 // --------------------------------------------------------
@@ -734,12 +805,12 @@ void Game::Draw(float deltaTime, float totalTime)
 		int directionalLightCount = (int)directionalLights.size();
 		int pointLightCount = (int)pointLights.size();
 		// Directionals
-		if (pixelShader->HasVariable("c_directionalLights"))
+		if (pixelShader->HasVariable("c_directionalLights") && directionalLightCount > 0)
 			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * directionalLightCount);
 		if (pixelShader->HasVariable("c_directionalLightCount"))
 			pixelShader->SetInt("c_directionalLightCount", directionalLightCount);
 		// Points
-		if (pixelShader->HasVariable("c_pointLights"))
+		if (pixelShader->HasVariable("c_pointLights") && pointLightCount > 1)
 			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * pointLightCount);
 		if (pixelShader->HasVariable("c_pointLightCount"))
 			pixelShader->SetInt("c_pointLightCount", pointLightCount);
