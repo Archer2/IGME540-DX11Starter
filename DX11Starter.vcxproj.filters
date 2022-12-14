@@ -165,7 +165,10 @@
     <FxCompile Include="IBLIrradianceMapPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="IBLIrradianceMapVS.hlsl">
+    <FxCompile Include="FullscreenTriangleVS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="IBLSpecularPrefilterPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

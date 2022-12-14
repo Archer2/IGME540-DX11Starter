@@ -68,7 +68,8 @@ private:
 	std::shared_ptr<SimplePixelShader> customPixelShader;
 	std::shared_ptr<SimpleVertexShader> skyVertexShader; 
 	std::shared_ptr<SimplePixelShader> skyPixelShader;
-	std::shared_ptr<SimpleVertexShader> irradianceVertexShader;
+	std::shared_ptr<SimpleVertexShader> fullscreenTriangleVertexShader;
 	std::shared_ptr<SimplePixelShader> irradiancePixelShader;
+	std::shared_ptr<SimplePixelShader> envPrefilterPixelShader;
 };
 

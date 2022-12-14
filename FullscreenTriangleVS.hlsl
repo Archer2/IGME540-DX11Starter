@@ -1,14 +1,10 @@
-// Position is required data for the pipeline, UV is required for Irradiance Map
-struct VertexToPixel
-{
-	float4 Position : SV_POSITION;
-	float2 UV		: TEXCOORD;
-};
+#include "ShaderHelpers.hlsli"
 
 // Uses full-screen triangle approach detailed in Post-Processing slides
-VertexToPixel main( uint id : SV_VERTEXID )
+// to generate Position and UV information for the rasterizer
+VertexToPixelFullscreenTriangle main( uint id : SV_VERTEXID )
 {
-	VertexToPixel output;
+	VertexToPixelFullscreenTriangle output;
 
 	// Calculate the UV (0,0 to 2,2) via the ID
 	// x = 0, 2, 0, 2, etc.
@@ -19,6 +15,6 @@ VertexToPixel main( uint id : SV_VERTEXID )
 	output.Position = float4(output.UV, 0, 1);
 	output.Position.x = output.Position.x * 2 - 1;
 	output.Position.y = output.Position.y * -2 + 1;
-
+	
 	return output;
 }

@@ -5,12 +5,16 @@
 
 // Macros describing type integers for BasicLight Types
 // - Must match LightType enum definition in Lights.h in C++
-#define LIGHT_TYPE_DIRECTIONAL 0;
-#define LIGHT_TYPE_POINT 1;
-#define LIGHT_TYPE_SPOT 2;
+#define LIGHT_TYPE_DIRECTIONAL 0
+#define LIGHT_TYPE_POINT 1
+#define LIGHT_TYPE_SPOT 2
 
 // Macro for the largest possible Specular Light exponent
-#define MAX_SPECULAR_EXPONENT 256.0f;
+#define MAX_SPECULAR_EXPONENT 256.0f
+
+// Macro for the maximum number of samples taken during the calculation of a Specular IBL
+// pre-filtered environment map
+#define MAX_IBL_SAMPLES 1024 // 1024 for performance - 4096 ideal
 
 // Constant floats necessary for Microfacet BRDF components
 // The fresnel value for non-metals (dielectrics)
@@ -19,7 +23,10 @@
 static const float F0_NON_METAL = 0.04f;
 // Minimum roughness for when spec distribution function denominator goes to zero
 static const float MIN_ROUGHNESS = 0.0000001f; // 6 zeros after decimal
+
 static const float PI = 3.14159265359f;
+static const float TWO_PI = PI * 2.0f;
+static const float PI_OVER_2 = PI / 2.0f;
 
 // Struct defining basic Light properties for all basic types
 // - Must match BasicLight struct definition in Lights.h
@@ -54,6 +61,14 @@ struct VertexToPixel
 	float2 uv				: TEXCOORD;		// UV texture coordinate
 	float3 worldPosition	: POSITION;		// World Position of the vertex to be interpolated
 	float3 tangent			: TANGENT;		// Tangent of the vertex to be used in Normal Mapping
+};
+
+// Struct representing data sent down the pipeline for all Pixel Shaders using
+// the full-screen Triangle trick to render images instead of geometry
+struct VertexToPixelFullscreenTriangle 
+{
+	float4 Position : SV_POSITION;
+	float2 UV		: TEXCOORD;
 };
 
 // Basic Diffuse Light calculation - Lambertian (N Dot L) Diffusion
@@ -213,6 +228,71 @@ float3 CalculatePointLightDiffuseAndSpecular(Light pointLight, VertexToPixel pix
 
 // ----------------------------- PBR IBL ----------------------------------------------
 
+// Treat a UV coordinate as a position on a plane one unit away from the origin, direction
+// determined by face. Get the normalized direction to that point on that plane
+//	- uv - [0,1] uv coordinate determined by the rasterizer
+//	- face - face index of the plane (active face of a cubemap)
+//		- 0 = +X, 1 = -X, 2 = +Y, 3 = -Y, 4 = +Z, 5 = -Z
+float3 CubeDirectionFromUV(float2 uv, int face)
+{
+	uv = uv * 2.f - 1.f; // unpack [0,1] to [-1,1]
+	float3 direction;
 
+	// Switch on the current Cube Face to determine the components
+	// of the directional Vector (ex: +Z is Front, so x is x and y
+	// is inverse y and z is 1)
+	switch (face) {
+	case 0:
+		direction = normalize(float3(1.f, -uv.y, -uv.x));
+		break;
+	case 1:
+		direction = normalize(float3(-1.f, -uv.y, uv.x));
+		break;
+	case 2:
+		direction = normalize(float3(uv.x, 1.f, uv.y));
+		break;
+	case 3:
+		direction = normalize(float3(uv.x, -1.f, -uv.y));
+		break;
+	case 4:
+		direction = normalize(float3(uv.x, -uv.y, 1.f));
+		break;
+	case 5:
+		direction = normalize(float3(-uv.x, -uv.y, -1.f));
+		break;
+	default:
+		direction = float3(1.f, 1.f, 1.f);
+		break;
+	}
+
+	return direction;
+}
+
+// Approximates the radiance integral using Importance Sampling
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+//
+// Calculates a 3d direction adjusted from a given input direction (N). The adjustment is based
+// off of a roughness value (roughness) and a point on a 2D grid (Xi). The 2D grid point provides
+// an offset from the N direction, and the roughness value determines how blurry the reflection is
+float3 ImportanceSampleGGX(float2 Xi, float roughness, float3 N)
+{
+	float a = roughness * roughness;
+
+	float phi = 2 * PI * Xi.x;
+	float cosTheta = sqrt((1 - Xi.y) / (1 + (a * a - 1) * Xi.y));
+	float sinTheta = sqrt(1 - cosTheta * cosTheta);
+
+	float3 H;
+	H.x = sinTheta * cos(phi);
+	H.y = sinTheta * sin(phi);
+	H.z = cosTheta;
+
+	float3 upVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+	float3 tangentX = normalize(cross(upVector, N));
+	float3 tangentY = cross(N, tangentX);
+	
+	// Tangent to world space
+	return tangentX * H.x + tangentY * H.y + N * H.z;
+}
 
 #endif

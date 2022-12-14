@@ -117,8 +117,9 @@ void Game::LoadShaders()
 	customPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"ProceduralPixelShader.cso").c_str());
 	skyVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"SkyVertexShader.cso").c_str());
 	skyPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"SkyPixelShader.cso").c_str());
-	irradianceVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"IBLIrradianceMapVS.cso").c_str());
+	fullscreenTriangleVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"FullscreenTriangleVS.cso").c_str());
 	irradiancePixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBLIrradianceMapPS.cso").c_str());
+	envPrefilterPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBLSpecularPrefilterPS.cso").c_str());
 }
 
 // --------------------------------------------------------
@@ -159,7 +160,7 @@ void Game::GenerateEntities()
 		samplerState,
 		skyVertexShader,
 		skyPixelShader);
-	sky->CreateEnvironmentMap(device, context, irradianceVertexShader, irradiancePixelShader);
+	sky->CreateEnvironmentMap(device, context, fullscreenTriangleVertexShader, irradiancePixelShader);
 
 	// Generate a fancy cube just above world origin
 	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
@@ -183,66 +184,66 @@ void Game::GenerateEntities()
 		int counter = 0; // Counter for current Entity
 		// Floor
 		entities.push_back(std::make_shared<Entity>(geometry[3], materials[3]));
-		entities[counter]->GetTransform()->AddAbsolutePosition(0, -1, 0);
-		entities[counter]->GetTransform()->SetAbsoluteScale(3.25, 1, 4.25);
+		entities[counter]->GetTransform()->AddAbsolutePosition(0.f, -1.f, 0.f);
+		entities[counter]->GetTransform()->SetAbsoluteScale(3.25f, 1.f, 4.25f);
 
 		// Columns
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
-		entities[counter]->GetTransform()->SetAbsolutePosition(3, .25, -4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2f, 1.25f, .2f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3.f, .25f, -4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-3, .25, -4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2f, 1.25f, .2f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3.f, .25f, -4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
-		entities[counter]->GetTransform()->SetAbsolutePosition(3, .25, 4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2f, 1.25f, .2f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3.f, .25f, 4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[5]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.2, 1.25, .2);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-3, .25, 4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.2f, 1.25f, .2f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3.f, .25f, 4.f);
 
 		// Spheres
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
-		entities[counter]->GetTransform()->SetAbsolutePosition(3, 1.75, -4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4f, .4f, .4f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3.f, 1.75f, -4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-3, 1.75, -4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4f, .4f, .4f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3.f, 1.75f, -4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
-		entities[counter]->GetTransform()->SetAbsolutePosition(3, 1.75, 4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4f, .4f, .4f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(3.f, 1.75f, 4.f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[2], materials[4]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.4, .4, .4);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-3, 1.75, 4);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.4f, .4f, .4f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-3.f, 1.75f, 4.f);
 
 		// Table
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
-		entities[counter]->GetTransform()->SetAbsolutePosition(1, -.75, -1.5);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1f, .25f, .1f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(1.f, -.75f, -1.5f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-1, -.75, -1.5);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1f, .25f, .1f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-1.f, -.75f, -1.5f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
-		entities[counter]->GetTransform()->SetAbsolutePosition(1, -.75, 1.5);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1f, .25f, .1f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(1.f, -.75f, 1.5f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[1], materials[1]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(.1, .25, .1);
-		entities[counter]->GetTransform()->SetAbsolutePosition(-1, -.75, 1.5);
+		entities[counter]->GetTransform()->SetAbsoluteScale(.1f, .25f, .1f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(-1.f, -.75f, 1.5f);
 		counter++;
 		entities.push_back(std::make_shared<Entity>(geometry[0], materials[0]));
-		entities[counter]->GetTransform()->SetAbsoluteScale(1.3, .03, 1.8);
-		entities[counter]->GetTransform()->SetAbsolutePosition(0, -.5, 0);
+		entities[counter]->GetTransform()->SetAbsoluteScale(1.3f, .03f, 1.8f);
+		entities[counter]->GetTransform()->SetAbsolutePosition(0.f, -.5f, 0.f);
 	}
 
 	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
