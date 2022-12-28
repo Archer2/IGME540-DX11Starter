@@ -38,7 +38,7 @@ float3 PrefilterEnvMap(float roughness, float3 R)
 		float NdotL = saturate(dot(N, L));
 		if (NdotL > 0) {
 			float3 sampleColor = EnvMap.SampleLevel(Sampler, L, 0).rgb;
-			totalColor = pow(abs(sampleColor), 2.2) * NdotL; // Apply inverse gamma correction
+			totalColor += pow(abs(sampleColor), 2.2) * NdotL; // Apply inverse gamma correction
 			totalWeight += NdotL;
 		}
 	}

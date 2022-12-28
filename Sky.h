@@ -21,6 +21,7 @@ public:
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera);
 
 	void CreateEnvironmentMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_context, std::shared_ptr<SimpleVertexShader> a_irradianceVS, std::shared_ptr<SimplePixelShader> a_irradiancePS);
+	void CreateSpecularReflectanceMap(Microsoft::WRL::ComPtr<ID3D11Device> a_device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_context, std::shared_ptr<SimpleVertexShader> a_vertShader, std::shared_ptr<SimplePixelShader> a_prefilterPS);
 
 	// Setters
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> a_samplerState);
@@ -41,8 +42,12 @@ public:
 	std::shared_ptr<SimplePixelShader> GetPixelShader();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetEnvironmentMap();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetReflectanceMap();
 
 protected:
+	D3D11_TEXTURE2D_DESC GetTextureCubeDescription();
+	D3D11_SHADER_RESOURCE_VIEW_DESC GetCubeSRVDescription();
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState; // Texture Sampler
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_cubeMap; // Texture Cube
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_depthState; // Depth Buffer State
@@ -52,5 +57,6 @@ protected:
 	std::shared_ptr<SimplePixelShader> m_pixelShader; // Sky-specific shader
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_envMap; // Texture Cube holding the Sky's irradiance map
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_specMap; // Texture Cube holding the Sky's prefiltered reflectance map
 };
 

@@ -29,6 +29,7 @@ Texture2D RoughnessTexture : register(t2); // PBR Roughness Map
 Texture2D MetalnessTexture : register(t3); // PBR Metalness Map
 
 TextureCube IrradianceMap : register(t4); // IBL Irradiance Map for Diffuse Light
+TextureCube ReflectionMap : register(t5); // IBL Specular Reflection Map (1/2 Split Sum Approximation)
 
 SamplerState BasicSampler : register(s0); // s registers for samplers
 
@@ -89,7 +90,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
 
 	float3 indirectSum = indirectDiffuse * albedoColor;
-
+	return ReflectionMap.SampleLevel(BasicSampler, input.normal, roughnessValue * 5); // TEMP to display IBLSpecMap
 	// Demo Indirect Diffuse Lighting
 	//return float4(pow(indirectDiffuse, 1.0f / 2.2f), 1.f);
 	//return float4(pow(indirectSum, 1.0f / 2.2f), 1.f);

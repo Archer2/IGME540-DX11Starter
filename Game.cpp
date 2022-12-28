@@ -161,6 +161,7 @@ void Game::GenerateEntities()
 		skyVertexShader,
 		skyPixelShader);
 	sky->CreateEnvironmentMap(device, context, fullscreenTriangleVertexShader, irradiancePixelShader);
+	sky->CreateSpecularReflectanceMap(device, context, fullscreenTriangleVertexShader, envPrefilterPixelShader);
 
 	// Generate a fancy cube just above world origin
 	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
@@ -816,9 +817,11 @@ void Game::Draw(float deltaTime, float totalTime)
 		if (pixelShader->HasVariable("c_pointLightCount"))
 			pixelShader->SetInt("c_pointLightCount", pointLightCount);
 
-		// Set Irradiance map
+		// Set IBL Maps
 		if (pixelShader->HasShaderResourceView("IrradianceMap"))
 			pixelShader->SetShaderResourceView("IrradianceMap", sky->GetEnvironmentMap());
+		if (pixelShader->HasShaderResourceView("ReflectionMap"))
+			pixelShader->SetShaderResourceView("ReflectionMap", sky->GetReflectanceMap());
 
 		// Draw Entity
 		entity->Draw(context, camera);
