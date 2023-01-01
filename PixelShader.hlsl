@@ -30,8 +30,33 @@ Texture2D MetalnessTexture : register(t3); // PBR Metalness Map
 
 TextureCube IrradianceMap : register(t4); // IBL Irradiance Map for Diffuse Light
 TextureCube ReflectionMap : register(t5); // IBL Specular Reflection Map (1/2 Split Sum Approximation)
+Texture2D BRDFIntegrationMap : register(t6); // IBL Specular Reflection BRDF Lookup Table
 
 SamplerState BasicSampler : register(s0); // s registers for samplers
+SamplerState ClampSampler : register(s1); // Clamp address mode is required for Specular IBL reference map sampling
+
+// --------------------------------------------------------
+// Approximate the Specular IBL Lighting. Stored as a function
+// here for easier access to texture resources. Code referenced
+// from Epic Games (2013, 
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf)
+// and Chris Cascioli for roughness usage and map sampling
+// (https://github.com/vixorien/ggp-advanced-demos/blob/main/Image-Based%20Lighting%20for%20Indirect%20PBR/Lighting.hlsli)
+// --------------------------------------------------------
+float3 SpecularIBLApproximation(float3 specColor, float roughness, float3 N, float3 pixelToCam)
+{
+	float3 R = normalize(reflect(-pixelToCam, N));
+	float NdotV = saturate(dot(N, pixelToCam)); // Dot product Normal . View
+	//float3 R = 2 * dot(V, N) * N - V; // Reflection Vector calculation from Epic. Not used here, since map is pre-filtered
+										// Would be fed into IBLSpecularPrefilterPS.hlsl::PrefilterEnvMap as R
+	roughness = max(roughness, MIN_ROUGHNESS); // Ensure roughness is usable
+
+	// Sample maps 
+	float3 reflectionColor = ReflectionMap.SampleLevel(ClampSampler, R, roughness * 5).rgb; // 5 is a placeholder for cbuffer data
+	float2 brdf = BRDFIntegrationMap.Sample(ClampSampler, float2(NdotV, roughness)).rg;
+
+	return reflectionColor * (specColor * brdf.x + brdf.y); // Modify reflectionColor by BRDF Fresnel
+}
 
 // --------------------------------------------------------
 // The entry point (main method) for our pixel shader
@@ -89,9 +114,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 indirectDiffuse = pow(abs(IrradianceMap.Sample(BasicSampler, input.normal).rgb), 2.2f);
 	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
 
-	float3 indirectSum = indirectDiffuse * albedoColor;
-	return ReflectionMap.SampleLevel(BasicSampler, input.normal, roughnessValue * 5); // TEMP to display IBLSpecMap
-	// Demo Indirect Diffuse Lighting
+	//return ReflectionMap.SampleLevel(BasicSampler, input.normal, roughnessValue * 5); // TESTING to display IBLSpecMap
+	float3 indirectSpecular = SpecularIBLApproximation(specularColor, roughnessValue, input.normal, cameraVector);
+	//return float4(indirectSpecular, 1); TESTING - display only indirect specular
+
+	float3 indirectSum = indirectSpecular + (indirectDiffuse * albedoColor);
+
+	// TEST Indirect Diffuse Lighting
 	//return float4(pow(indirectDiffuse, 1.0f / 2.2f), 1.f);
 	//return float4(pow(indirectSum, 1.0f / 2.2f), 1.f);
 

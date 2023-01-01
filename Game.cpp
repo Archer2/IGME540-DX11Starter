@@ -120,6 +120,10 @@ void Game::LoadShaders()
 	fullscreenTriangleVertexShader = std::make_shared<SimpleVertexShader>(device, context, FixPath(L"FullscreenTriangleVS.cso").c_str());
 	irradiancePixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBLIrradianceMapPS.cso").c_str());
 	envPrefilterPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBLSpecularPrefilterPS.cso").c_str());
+	brdfLookupMapPixelShader = std::make_shared<SimplePixelShader>(device, context, FixPath(L"IBlBRDFIntegrateMapPS.cso").c_str());
+
+	// Create Shader resources univeral to the Game
+	CreateIBLBRDFLookupTable();
 }
 
 // --------------------------------------------------------
@@ -168,20 +172,20 @@ void Game::GenerateEntities()
 	//entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
 
 	// Generate a line of entities, 1 for each geometry or material
-	//float entityOffset = 4.f; // Offset of each entity from its neighbors
-	//float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
-	//for (int i = 0; i < materials.size()-1; i++) {
-	//	xPosition += entityOffset; // Increment position for the line
-	//
-	//	// Create and edit entity
-	//	//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
-	//	std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[0], materials[i]);
-	//	entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
-	//	entities.push_back(entity);
-	//}
+	float entityOffset = 4.f; // Offset of each entity from its neighbors
+	float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
+	for (int i = 0; i < materials.size()-1; i++) {
+		xPosition += entityOffset; // Increment position for the line
+	
+		// Create and edit entity
+		//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[2], materials[i]);
+		entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
+		entities.push_back(entity);
+	}
 
 	// Create Entities for a screne of a simple room and table - Final Demo
-	{
+	/*{
 		int counter = 0; // Counter for current Entity
 		// Floor
 		entities.push_back(std::make_shared<Entity>(geometry[3], materials[3]));
@@ -245,7 +249,7 @@ void Game::GenerateEntities()
 		entities.push_back(std::make_shared<Entity>(geometry[0], materials[0]));
 		entities[counter]->GetTransform()->SetAbsoluteScale(1.3f, .03f, 1.8f);
 		entities[counter]->GetTransform()->SetAbsolutePosition(0.f, -.5f, 0.f);
-	}
+	}*/
 
 	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
 	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4); - No cube in use
@@ -352,6 +356,13 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
 	device->CreateSamplerState(&desc, samplerState.GetAddressOf());
 
+	// Create a Clamped version as well
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
+	device->CreateSamplerState(&desc, clampState.GetAddressOf());
+
 	// Basic Pixel and Vertex Shader Materials (basic white color tint)
 	size_t counter = materials.size(); // Counter to access the materials vector at the new slot
 
@@ -362,6 +373,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", marbleRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", (marbleMetalnessSRV != nullptr) ? marbleMetalnessSRV : fullNonMetalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	counter++; // Increment counter to be in next Material's position
 	
 	// Metal Plates - possibly the only texture without gamma correction built in
@@ -371,6 +383,7 @@ void Game::CreateMaterials()
 	//materials[counter]->AddTextureSRV("RoughnessTexture", metalPlatesRoughnessSRV);
 	//materials[counter]->AddTextureSRV("MetalnessTexture", metalPlatesMetalnessSRV);
 	//materials[counter]->AddSampler("BasicSampler", samplerState);
+	//materials[counter]->AddSampler("ClampSampler", clampState);
 	////materials[counter]->SetUVScale(.5f);
 	//counter++;
 	
@@ -381,6 +394,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", woodRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", (woodMetalnessSRV != nullptr) ? woodMetalnessSRV : fullNonMetalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	counter++;
 	
 	// Metal
@@ -388,8 +402,9 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("AlbedoTexture", metalSRV);
 	materials[counter]->AddTextureSRV("NormalTexture", metalNormalSRV);
 	materials[counter]->AddTextureSRV("RoughnessTexture", metalRoughnessSRV);
-	materials[counter]->AddTextureSRV("MetalnessTexture", /*(metalMetalnessSRV != nullptr) ? metalMetalnessSRV : */ fullNonMetalSRV); // Uses full non-metal for IBL testing
+	materials[counter]->AddTextureSRV("MetalnessTexture", (metalMetalnessSRV != nullptr) ? metalMetalnessSRV :  fullNonMetalSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	counter++;
 
 	// Cobblestone
@@ -399,6 +414,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", cobbleRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", cobbleMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	materials[counter]->SetUVScale(.25f); // .5 looks good. .25 for Final Demo scene
 	counter++;
 	 
@@ -409,6 +425,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", bronzeRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", bronzeMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	counter++;
 
 	// Scratched Paint
@@ -418,6 +435,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", paintRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", paintMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	materials[counter]->SetUVScale(.75); // Set for Final Demo scene
 	counter++;
 
@@ -428,6 +446,7 @@ void Game::CreateMaterials()
 	materials[counter]->AddTextureSRV("RoughnessTexture", floorRoughnessSRV);
 	materials[counter]->AddTextureSRV("MetalnessTexture", floorMetalnessSRV);
 	materials[counter]->AddSampler("BasicSampler", samplerState);
+	materials[counter]->AddSampler("ClampSampler", clampState);
 	materials[counter]->SetUVScale(.5f);
 	// No need to increment counter
 
@@ -489,6 +508,82 @@ void Game::CreateLights()
 	//l2->GetTransform()->SetAbsolutePosition(pointLight2.Position);
 	//l2->GetTransform()->SetAbsoluteScale(.1f, .1f, .1f);
 	//entities.push_back(l2);
+}
+
+// ----------------------------------------------------------
+// Create a texture representing the BRDF Lookup Table for IBL
+// lighting. Since this is not object or material dependant, it
+// can be created once and used for everything
+// ----------------------------------------------------------
+void Game::CreateIBLBRDFLookupTable()
+{
+	// Create Texture2D resource
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> brdfTableTex;
+	D3D11_TEXTURE2D_DESC brdfTableDesc = {};
+	brdfTableDesc.Height = 256; // Hardcoded for now, but this is a reasonable size (used in Cascioli sample code)
+	brdfTableDesc.Width = brdfTableDesc.Height;
+	brdfTableDesc.MipLevels = 1;
+	brdfTableDesc.ArraySize = 1;
+	brdfTableDesc.Format = DXGI_FORMAT_R16G16_UNORM; // double-precision R,G - no B or A
+	brdfTableDesc.SampleDesc.Count = 1;
+	brdfTableDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+
+	device->CreateTexture2D(&brdfTableDesc, nullptr, brdfTableTex.GetAddressOf()); // Make on GPU
+
+	// Create SRV
+	D3D11_SHADER_RESOURCE_VIEW_DESC tableSRVDesc = {};
+	tableSRVDesc.Format = brdfTableDesc.Format;
+	tableSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	tableSRVDesc.Texture2D.MipLevels = 1;
+	tableSRVDesc.Texture2D.MostDetailedMip = 0;
+	
+	device->CreateShaderResourceView(brdfTableTex.Get(), &tableSRVDesc, iblBRDFLookupTexture.GetAddressOf());
+
+	// Save previous render resources (viewport, depth buffer, render target)
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
+	context->OMGetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.GetAddressOf());
+	UINT viewportCount = 1;
+	D3D11_VIEWPORT cachedViewport;
+	context->RSGetViewports(&viewportCount, &cachedViewport);
+
+	// Turn off Vertex and Input Buffers in case they had data and set topology in case not yet set
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+	UINT stride = sizeof(Vertex); // Stride of everything else being drawn?
+	UINT offset = 0;
+	ID3D11Buffer* nullBuffer = nullptr; // Must pass address of nullptr to clear, not nullptr itself
+	context->IASetVertexBuffers(0, 1, &nullBuffer, &stride, &offset);
+
+	// Create Viewport for the texture
+	D3D11_VIEWPORT textureViewport = {};
+	textureViewport.MaxDepth = 1.f;
+	textureViewport.Height = (FLOAT)brdfTableDesc.Height;
+	textureViewport.Width = (FLOAT)brdfTableDesc.Width;
+
+	context->RSSetViewports(viewportCount, &textureViewport);
+
+	// Create RTV for texture
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> tableRTV;
+	D3D11_RENDER_TARGET_VIEW_DESC tableRTVDesc = {};
+	tableRTVDesc.Format = brdfTableDesc.Format;
+	tableRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	tableRTVDesc.Texture2D.MipSlice = 0;
+
+	device->CreateRenderTargetView(brdfTableTex.Get(), &tableRTVDesc, tableRTV.GetAddressOf());
+	float black[4] = {}; // Initialize to all zeroes
+	context->ClearRenderTargetView(tableRTV.Get(), black);
+	context->OMSetRenderTargets(1, tableRTV.GetAddressOf(), nullptr);
+
+	// Set shaders and draw
+	brdfLookupMapPixelShader->SetShader();
+	fullscreenTriangleVertexShader->SetShader();
+	context->Draw(3, 0);
+	//context->Flush(); probably not necessary on this, but could be useful on the TexCube creations
+
+	// Reset cached resources
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	context->RSSetViewports(viewportCount, &cachedViewport);
 }
 
 // ----------------------------------------------------------
@@ -822,6 +917,8 @@ void Game::Draw(float deltaTime, float totalTime)
 			pixelShader->SetShaderResourceView("IrradianceMap", sky->GetEnvironmentMap());
 		if (pixelShader->HasShaderResourceView("ReflectionMap"))
 			pixelShader->SetShaderResourceView("ReflectionMap", sky->GetReflectanceMap());
+		if (pixelShader->HasShaderResourceView("BRDFIntegrationMap"))
+			pixelShader->SetShaderResourceView("BRDFIntegrationMap", iblBRDFLookupTexture);
 
 		// Draw Entity
 		entity->Draw(context, camera);

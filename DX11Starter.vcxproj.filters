@@ -171,6 +171,9 @@
     <FxCompile Include="IBLSpecularPrefilterPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="IBLBRDFIntegrateMapPS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ShaderHelpers.hlsli">

@@ -37,6 +37,7 @@ private:
 	void GenerateEntities();
 	void CreateMaterials();
 	void CreateLights();
+	void CreateIBLBRDFLookupTable();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadTexture(std::wstring a_filePath);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadTextureCube(std::wstring a_filePath);
@@ -71,5 +72,8 @@ private:
 	std::shared_ptr<SimpleVertexShader> fullscreenTriangleVertexShader;
 	std::shared_ptr<SimplePixelShader> irradiancePixelShader;
 	std::shared_ptr<SimplePixelShader> envPrefilterPixelShader;
+	std::shared_ptr<SimplePixelShader> brdfLookupMapPixelShader;
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> iblBRDFLookupTexture;
 };
 
