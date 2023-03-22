@@ -134,9 +134,9 @@ void Game::LoadGeometry()
 	// Load default files provided in A6
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cube.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/cylinder.obj").c_str(), device, context));
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/helix.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
 	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
 }
@@ -170,6 +170,7 @@ void Game::GenerateEntities()
 	// Generate a fancy cube just above world origin
 	//entities.push_back(std::make_shared<Entity>(geometry[0], materials[materials.size()-1]));
 	//entities[0]->GetTransform()->AddAbsolutePosition(0.f, 3.f, 0.f);
+	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
 
 	// Generate a line of entities, 1 for each geometry or material
 	float entityOffset = 4.f; // Offset of each entity from its neighbors
@@ -184,8 +185,9 @@ void Game::GenerateEntities()
 		entities.push_back(entity);
 	}
 
-	// Create Entities for a screne of a simple room and table - Final Demo
-	/*{
+	// Create Entities for a screen of a simple room and table - Final Demo
+	/*
+	{
 		int counter = 0; // Counter for current Entity
 		// Floor
 		entities.push_back(std::make_shared<Entity>(geometry[3], materials[3]));
@@ -249,10 +251,8 @@ void Game::GenerateEntities()
 		entities.push_back(std::make_shared<Entity>(geometry[0], materials[0]));
 		entities[counter]->GetTransform()->SetAbsoluteScale(1.3f, .03f, 1.8f);
 		entities[counter]->GetTransform()->SetAbsolutePosition(0.f, -.5f, 0.f);
-	}*/
-
-	// Rotate cube 45 degrees pitch and yaw to demonstrate odd sides
-	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4); - No cube in use
+	}
+	*/
 }
 
 // ----------------------------------------------------------
@@ -938,7 +938,11 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Present the back buffer to the user
 		//  - Puts the results of what we've drawn onto the window
 		//  - Without this, the user never sees anything
-		swapChain->Present(vsync ? 1 : 0, 0);
+		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
+		swapChain->Present(
+			vsyncNecessary ? 1 : 0,
+			vsyncNecessary ? 0 : DXGI_PRESENT_ALLOW_TEARING
+		);
 
 		// Must re-bind buffers after presenting, as they become unbound
 		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
