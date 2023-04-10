@@ -74,5 +74,5 @@ float4 main(VertexToPixelFullscreenTriangle input) : SV_TARGET
 	}
 
 	totalColor = PI * totalColor / samples; // Average the total color - PI is a constant multiplier outside of the double-angle integral
-	return float4(pow(totalColor, 1.f / 2.2f), 1.f); // Apply gamma correction to the final
+	return float4(pow(totalColor, 1.f / 2.2f), 1.f); // Apply gamma correction to the final color, in case texture is used standalone
 }

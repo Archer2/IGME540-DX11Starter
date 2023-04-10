@@ -96,10 +96,10 @@ void Game::Init()
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
 	cameraTransform.SetAbsolutePosition(0.f, 1.5f, -10.f); // Rearranged for Final demo scene
-	cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
+	//cameraTransform.SetAbsoluteRotation(0.f, 0.f, XM_PI); // Does not work, because Camera still uses hacked rotation
 	camera = std::make_shared<Camera>(cameraTransform, XMINT2(this->windowWidth, this->windowHeight));
 	//camera->AddCameraRotation(0.f, XM_PI, 0.f); // Hacked Camera rotation
-	camera->AddCameraRotation(DirectX::XMConvertToRadians(12.f), 0.f, 0.f); // Final Demo scene camera pos
+	//camera->AddCameraRotation(DirectX::XMConvertToRadians(12.f), 0.f, 0.f); // Final Demo scene camera pos
 }
 
 // --------------------------------------------------------
@@ -173,15 +173,31 @@ void Game::GenerateEntities()
 	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
 
 	// Generate a line of entities, 1 for each geometry or material
-	float entityOffset = 4.f; // Offset of each entity from its neighbors
-	float xPosition = (materials.size()-1) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
-	for (int i = 0; i < materials.size()-1; i++) {
+	float entityOffset = 2.5f; // Offset of each entity from its neighbors
+	// MODIFIED to cut off last 12 materials, since they are full non-metal and full metal with white color and flat normals
+	float xPosition = (materials.size() - 13) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
+	for (int i = 0; i < materials.size()-13; i++) {
 		xPosition += entityOffset; // Increment position for the line
 	
 		// Create and edit entity
 		//std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[i], materials[(UINT)GenerateRandomFloat(0.f, (float)materials.size()-1.f)]);
-		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[2], materials[i]);
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[3], materials[i]);
 		entity->GetTransform()->SetAbsolutePosition(xPosition, 0.f, 0.f); // Offset down so planes are visible from origin camera
+		entities.push_back(entity);
+	}
+	// Create upper and lower rows of IBL Demo spheres
+	xPosition = 6.f * -(entityOffset / 2.f) - (entityOffset / 2.f);
+	for (int i = materials.size() - 13; i < materials.size() - 7; i++) {
+		xPosition += entityOffset;
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[3], materials[i]);
+		entity->GetTransform()->SetAbsolutePosition(xPosition, entityOffset, 0.f);
+		entities.push_back(entity);
+	}
+	xPosition = 6.f * -(entityOffset / 2.f) - (entityOffset / 2.f);
+	for (int i = materials.size() - 7; i < materials.size() - 1; i++) {
+		xPosition += entityOffset;
+		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[3], materials[i]);
+		entity->GetTransform()->SetAbsolutePosition(xPosition, -entityOffset, 0.f);
 		entities.push_back(entity);
 	}
 
@@ -448,6 +464,31 @@ void Game::CreateMaterials()
 	materials[counter]->AddSampler("BasicSampler", samplerState);
 	materials[counter]->AddSampler("ClampSampler", clampState);
 	materials[counter]->SetUVScale(.5f);
+	counter++;
+
+	// Pure Metal Materials
+	for (int i = 0; i < 6; i++) {
+		materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 1.f-((float)i / 5.f)));
+		materials[counter]->AddTextureSRV("AlbedoTexture", fullMetalSRV);
+		materials[counter]->AddTextureSRV("NormalTexture", defaultNormalSRV);
+		materials[counter]->AddTextureSRV("RoughnessTexture", fullMetalSRV);
+		materials[counter]->AddTextureSRV("MetalnessTexture", fullMetalSRV);
+		materials[counter]->AddSampler("BasicSampler", samplerState);
+		materials[counter]->AddSampler("ClampSampler", clampState);
+		counter++;
+	}
+
+	// Pure Non-Metal Materials
+	for (int i = 0; i < 6; i++) {
+		materials.push_back(std::make_shared<Material>(vertexShader, pixelShader, XMFLOAT4(1.f, 1.f, 1.f, 1.f), 1.f - ((float)i / 5.f)));
+		materials[counter]->AddTextureSRV("AlbedoTexture", fullMetalSRV);
+		materials[counter]->AddTextureSRV("NormalTexture", defaultNormalSRV);
+		materials[counter]->AddTextureSRV("RoughnessTexture", fullMetalSRV);
+		materials[counter]->AddTextureSRV("MetalnessTexture", fullNonMetalSRV);
+		materials[counter]->AddSampler("BasicSampler", samplerState);
+		materials[counter]->AddSampler("ClampSampler", clampState);
+		counter++;
+	}
 	// No need to increment counter
 
 	// Procedural Pixel Shader
@@ -520,7 +561,7 @@ void Game::CreateIBLBRDFLookupTable()
 	// Create Texture2D resource
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> brdfTableTex;
 	D3D11_TEXTURE2D_DESC brdfTableDesc = {};
-	brdfTableDesc.Height = 256; // Hardcoded for now, but this is a reasonable size (used in Cascioli sample code)
+	brdfTableDesc.Height = 1024; // Hardcoded for now, but this is a reasonable size (used in Cascioli sample code)
 	brdfTableDesc.Width = brdfTableDesc.Height;
 	brdfTableDesc.MipLevels = 1;
 	brdfTableDesc.ArraySize = 1;

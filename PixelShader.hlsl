@@ -7,7 +7,7 @@ cbuffer PixelConstantData : register(b0)
 {
 	float4 c_color; // Color to tint the main color with
 	float3 c_cameraPosition; // Position of the active Camera
-	float  c_roughness; // Inverse shininess of the object
+	float  c_roughnessScale; // Inverse shininess of the object
 	float2 c_uvOffset; // Universal Offset for the UVs
 	float  c_uvScale; // Universal Scale for the UVs
 }
@@ -52,7 +52,10 @@ float3 SpecularIBLApproximation(float3 specColor, float roughness, float3 N, flo
 	roughness = max(roughness, MIN_ROUGHNESS); // Ensure roughness is usable
 
 	// Sample maps 
-	float3 reflectionColor = ReflectionMap.SampleLevel(ClampSampler, R, roughness * 5).rgb; // 5 is a placeholder for cbuffer data
+	// 6 is a placeholder for cbuffer data - Number of mips in Convolved Map
+	// Reverse gamma correction from ONLY reflection map - it is factored back in during 
+	// lighting calculation. IBL textures do not have this built in, so it must be taken out before 
+	float3 reflectionColor = pow(abs(ReflectionMap.SampleLevel(ClampSampler, R, roughness * 6).rgb), 2.2f);
 	float2 brdf = BRDFIntegrationMap.Sample(ClampSampler, float2(NdotV, roughness)).rg;
 
 	return reflectionColor * (specColor * brdf.x + brdf.y); // Modify reflectionColor by BRDF Fresnel
@@ -83,6 +86,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	albedoColor = pow(albedoColor, 2.2f) * c_color.rgb; // Reverse embedded image Gamma Correction before lighting is applied (only done for surface color texture)
 
 	float roughnessValue = RoughnessTexture.Sample(BasicSampler, input.uv).r; // Possibly should be saturated
+	roughnessValue *= 1.f - c_roughnessScale; // This is in place to make demoing IBL textures easier, removing the need for a material/texture per roughness level
 	float metalnessValue = MetalnessTexture.Sample(BasicSampler, input.uv).r; // Probably should be saturated
 
 	// For metals, specular is actually just the albedo. Lerp is used because filtering the texture can result in Metalness Values of not 0 or 1
@@ -112,11 +116,12 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	// Calculate IBL Light
 	float3 indirectDiffuse = pow(abs(IrradianceMap.Sample(BasicSampler, input.normal).rgb), 2.2f);
-	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
+	//indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, specularColor, metalnessValue);
 
 	//return ReflectionMap.SampleLevel(BasicSampler, input.normal, roughnessValue * 5); // TESTING to display IBLSpecMap
 	float3 indirectSpecular = SpecularIBLApproximation(specularColor, roughnessValue, input.normal, cameraVector);
 	//return float4(indirectSpecular, 1); TESTING - display only indirect specular
+	indirectDiffuse = ConserveDiffuseEnergy(indirectDiffuse, indirectSpecular, metalnessValue);
 
 	float3 indirectSum = indirectSpecular + (indirectDiffuse * albedoColor);
 

@@ -67,8 +67,8 @@ void Material::PrepareMaterial()
 	// Set miscellaneous Material values
 	if (m_pixelShader->HasVariable("c_color"))
 		m_pixelShader->SetFloat4("c_color", m_colorTint);
-	if (m_pixelShader->HasVariable("c_roughness"))
-		m_pixelShader->SetFloat("c_roughness", m_roughness);
+	if (m_pixelShader->HasVariable("c_roughnessScale"))
+		m_pixelShader->SetFloat("c_roughnessScale", m_roughness);
 }
 
 // ----------------------------------------------------------

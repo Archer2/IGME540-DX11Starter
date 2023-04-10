@@ -44,7 +44,7 @@ float3 PrefilterEnvMap(float roughness, float3 R)
 	}
 	
 	// Average the result of the samples
-	return pow(abs(totalColor / totalWeight), 1.f / 2.2f); // Apply gamma correction
+	return pow(abs(totalColor / totalWeight), 1.f / 2.2f); // Apply gamma correction, just in case texture is displayed alone
 }
 
 
