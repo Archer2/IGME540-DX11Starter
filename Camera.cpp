@@ -150,6 +150,17 @@ void Camera::AddCameraRotation(float pitch, float yaw, float roll)
 }
 
 // ----------------------------------------------------------
+// Force Pitch and Yaw to the Camera's rotation in Euler angles
+//	- Roll is ignored
+//	- This function was hastily made when testing IBL Reflection Probes
+// ----------------------------------------------------------
+void Camera::SetCameraRotation(float pitch, float yaw, float roll)
+{
+	m_rotationPitchYaw.x = pitch; // No checking
+	m_rotationPitchYaw.y = yaw;
+}
+
+// ----------------------------------------------------------
 // Retrieves the Camera's Field of View
 // ----------------------------------------------------------
 float Camera::GetFieldOfView()

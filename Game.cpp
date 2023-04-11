@@ -93,6 +93,10 @@ void Game::Init()
 	GenerateEntities();
 	CreateLights();
 
+	// Test a Reflection Probe
+	std::shared_ptr<ReflectionProbe> probe = std::make_shared<ReflectionProbe>(100.f, Vector3(0.f, 0.f, -10.f), vertexShader, fullscreenTriangleVertexShader, pixelShader, envPrefilterPixelShader, device);
+	reflectionProbes.push_back(probe);
+	
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
 	cameraTransform.SetAbsolutePosition(0.f, 1.5f, -10.f); // Rearranged for Final demo scene
@@ -187,14 +191,14 @@ void Game::GenerateEntities()
 	}
 	// Create upper and lower rows of IBL Demo spheres
 	xPosition = 6.f * -(entityOffset / 2.f) - (entityOffset / 2.f);
-	for (int i = materials.size() - 13; i < materials.size() - 7; i++) {
+	for (size_t i = materials.size() - 13; i < materials.size() - 7; i++) {
 		xPosition += entityOffset;
 		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[3], materials[i]);
 		entity->GetTransform()->SetAbsolutePosition(xPosition, entityOffset, 0.f);
 		entities.push_back(entity);
 	}
 	xPosition = 6.f * -(entityOffset / 2.f) - (entityOffset / 2.f);
-	for (int i = materials.size() - 7; i < materials.size() - 1; i++) {
+	for (size_t i = materials.size() - 7; i < materials.size() - 1; i++) {
 		xPosition += entityOffset;
 		std::shared_ptr<Entity> entity = std::make_shared<Entity>(geometry[3], materials[i]);
 		entity->GetTransform()->SetAbsolutePosition(xPosition, -entityOffset, 0.f);
@@ -922,6 +926,13 @@ void Game::Update(float deltaTime, float totalTime)
 void Game::Draw(float deltaTime, float totalTime)
 {
 	//float sceneAmbientColor[4] = { 0.11f, 0.07f, 0.18f, 1.f }; - Not used in current shading model (PBR)
+
+	// Update Reflection Probes BEFORE clearing back buffer (not incredibly important, but they are a "pre-process" of sorts)
+	//	- This results in a noticeable slowdown, even before convolution is done. ~45fps just rendering the scene cubemap
+	//	  at 512x512 resolution per face
+	//for (std::shared_ptr<ReflectionProbe> probe : reflectionProbes) {
+	//	probe->Draw(device, context, entities, directionalLights, pointLights, sky, iblBRDFLookupTexture);
+	//}
 
 	// Frame START
 	// - These things should happen ONCE PER FRAME

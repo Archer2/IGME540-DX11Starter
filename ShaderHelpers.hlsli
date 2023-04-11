@@ -241,7 +241,7 @@ float3 CubeDirectionFromUV(float2 uv, int face)
 	// Switch on the current Cube Face to determine the components
 	// of the directional Vector (ex: +Z is Front, so x is x and y
 	// is inverse y and z is 1)
-	switch (face) {
+	switch (face) { // TODO: Replace Case magic numbers with #defines
 	case 0:
 		direction = normalize(float3(1.f, -uv.y, -uv.x));
 		break;

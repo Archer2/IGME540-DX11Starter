@@ -25,8 +25,8 @@ public:
 	~Entity();
 
 	// Core Functions
-	void Update(float deltaTime);
-	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera);
+	virtual void Update(float deltaTime);
+	virtual void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> a_d3dContext, std::shared_ptr<Camera> a_mainCamera);
 
 	// Setters (The internal Mesh is not intended to be reset at this time)
 	void SetTransform(Transform a_newTransform);

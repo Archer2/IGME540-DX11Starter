@@ -7,6 +7,7 @@
 #include "Material.h"
 #include "Lights.h"
 #include "Sky.h"
+#include "ReflectionProbe.h" // oh boy
 
 #include "simpleshader/SimpleShader.h"
 
@@ -59,6 +60,7 @@ private:
 	std::vector<BasicLight> directionalLights; // Pointer is really not needed for these structs, at least not now
 	std::vector<BasicLight> pointLights;
 	std::shared_ptr<Sky> sky;
+	std::vector<std::shared_ptr<ReflectionProbe>> reflectionProbes; // Real-time probes, so should be SMALL
 
 	// Camera
 	std::shared_ptr<Camera> camera;

@@ -44,6 +44,7 @@ public:
 	// Camera rotation methods to handle manual Euler rotations - This should go through Transform eventually
 	void AddCameraRotation(Vector3 a_rotationPitchYawRoll);
 	void AddCameraRotation(float pitch, float yaw, float roll);
+	void SetCameraRotation(float pitch, float yaw, float roll);
 
 	// Getters for Camera Fields
 	float GetFieldOfView();
