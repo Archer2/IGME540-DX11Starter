@@ -12,7 +12,7 @@ std::wstring NarrowToWide(const std::string& str);
 
 // ----------------------------------------------------
 //  Helper function to generate a random float value
-//	between 0 and 1. Inflined if possible
+//	between 0 and 1. Inlined if possible
 // ----------------------------------------------------
 inline float GenerateRandomFloat() { return (float)std::rand() / (float)RAND_MAX; };
 

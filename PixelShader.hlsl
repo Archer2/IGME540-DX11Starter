@@ -2,6 +2,15 @@
 
 #define MAX_LIGHTS_OF_SINGLE_TYPE 64
 
+// Struct defining MRT output
+struct PixelOutputs 
+{
+	float4 SceneColor : SV_TARGET0;
+	float4 SceneAmbient : SV_TARGET1;
+	float4 SceneNormal : SV_TARGET2;
+	float SceneDepth : SV_TARGET3; // Render Target at slot 3 MUST have single-value format
+};
+
 // Struct representing constant data shared between all pixels
 cbuffer PixelConstantData : register(b0)
 {
@@ -70,7 +79,11 @@ float3 SpecularIBLApproximation(float3 specColor, float roughness, float3 N, flo
 //    "put the output of this into the current render target"
 // - Named "main" because that's the default the shader compiler looks for
 // --------------------------------------------------------
+#if MULTIPLE_RENDER_TARGETS
+PixelOutputs main(VertexToPixel input)
+#else
 float4 main(VertexToPixel input) : SV_TARGET
+#endif
 {
 	// Re-normalize input
 	input.normal = normalize(input.normal);
@@ -131,5 +144,15 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	// Calculate and return final light
 	float3 finalLight = directionalLightSum + pointLightSum + indirectSum;
+
+#if MULTIPLE_RENDER_TARGETS
+	PixelOutputs output;
+	output.SceneColor = float4(directionalLightSum + pointLightSum + indirectSpecular, 1.f); // NO Gamma Correction!
+	output.SceneAmbient = float4(albedoColor * indirectDiffuse, 1.f); // "Ambient" is diffuse indirect light - NO Gamma Correction!
+	output.SceneNormal = float4(input.normal * .5f + .5f, 1.f); // Pack into 0-1 range
+	output.SceneDepth = input.screenPosition.z;
+	return output;
+#else
 	return float4(pow(finalLight, 1.0f/2.2f), 1.f); // Apply Gamma Correction, and set the Alpha value to 1 (since it doesn't matter)
+#endif
 }

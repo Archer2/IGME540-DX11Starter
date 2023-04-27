@@ -7,6 +7,7 @@
 #include "Material.h"
 #include "Lights.h"
 #include "Sky.h"
+#include "Renderer.h"
 #include "ReflectionProbe.h" // oh boy
 
 #include "simpleshader/SimpleShader.h"
@@ -53,6 +54,11 @@ private:
 	//     Component Object Model, which DirectX objects do
 	//  - More info here: https://github.com/Microsoft/DirectXTK/wiki/ComPtr
 	
+	// Renderer Object is stored by Game as the easiest integration. Ideally they would be completely separate,
+	// but able to get references to each other or be invokable. An alternate method to examine is having a
+	// separate thread for each, operating completely independently
+	std::shared_ptr<Renderer> m_renderer;
+
 	// Core object storage
 	std::vector<std::shared_ptr<Mesh>> geometry;
 	std::vector<std::shared_ptr<Entity>> entities; // Shared Pointers for consistency, safety, and stack avoidance

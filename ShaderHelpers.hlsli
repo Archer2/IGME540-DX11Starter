@@ -3,6 +3,11 @@
 
 #include "Hammersley.hlsli"
 
+// If enabled (1), will output values needed for SSAO rather than a single pixel color
+// If enabled, SkyPS will also reverse gamma correction on itself to allow it to function
+// better with post-processes that assume no gamma correction has taken place
+#define MULTIPLE_RENDER_TARGETS 1
+
 // Macros describing type integers for BasicLight Types
 // - Must match LightType enum definition in Lights.h in C++
 #define LIGHT_TYPE_DIRECTIONAL 0

@@ -93,6 +93,10 @@ void Game::Init()
 	GenerateEntities();
 	CreateLights();
 
+	// Create Renderer (MUST be done after LoadShaders so BRDF Texture is loaded
+	m_renderer = std::make_shared<Renderer>(device, context, swapChain, backBufferRTV, 
+		depthBufferDSV, iblBRDFLookupTexture, fullscreenTriangleVertexShader, windowWidth, windowHeight);
+
 	// Test a Reflection Probe
 	std::shared_ptr<ReflectionProbe> probe = std::make_shared<ReflectionProbe>(100.f, Vector3(0.f, 0.f, -10.f), vertexShader, fullscreenTriangleVertexShader, pixelShader, envPrefilterPixelShader, device);
 	reflectionProbes.push_back(probe);
@@ -142,7 +146,7 @@ void Game::LoadGeometry()
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/sphere.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/torus.obj").c_str(), device, context));
 	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad.obj").c_str(), device, context));
-	//geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
+	geometry.push_back(std::make_shared<Mesh>(FixPath(L"../../assets/meshes/quad_double_sided.obj").c_str(), device, context));
 }
 
 // --------------------------------------------------------
@@ -177,7 +181,7 @@ void Game::GenerateEntities()
 	//entities[0]->GetTransform()->SetAbsoluteRotation(0.f, XM_PIDIV4, XM_PIDIV4);
 
 	// Generate a line of entities, 1 for each geometry or material
-	float entityOffset = 2.5f; // Offset of each entity from its neighbors
+	float entityOffset = 2.f; // Offset of each entity from its neighbors
 	// MODIFIED to cut off last 12 materials, since they are full non-metal and full metal with white color and flat normals
 	float xPosition = (materials.size() - 13) * -(entityOffset / 2.f) - (entityOffset / 2.f); // Position of 1st entity for centered line
 	for (int i = 0; i < materials.size()-13; i++) {
@@ -205,7 +209,7 @@ void Game::GenerateEntities()
 		entities.push_back(entity);
 	}
 
-	// Create Entities for a screen of a simple room and table - Final Demo
+	// Create Entities for a screen of a simple room and table - Final Demo (IGME 540)
 	/*
 	{
 		int counter = 0; // Counter for current Entity
@@ -888,8 +892,14 @@ void Game::UIEditorWindow()
 // --------------------------------------------------------
 void Game::OnResize()
 {
+	// Prepare Renderer for Resize
+	m_renderer->PreResize();
+
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
+
+	// Set new Renderer info for new size
+	m_renderer->PostResize(windowWidth, windowHeight, backBufferRTV, depthBufferDSV);
 
 	// Resize Camera
 	if (camera != nullptr) {
@@ -925,8 +935,6 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	//float sceneAmbientColor[4] = { 0.11f, 0.07f, 0.18f, 1.f }; - Not used in current shading model (PBR)
-
 	// Update Reflection Probes BEFORE clearing back buffer (not incredibly important, but they are a "pre-process" of sorts)
 	//	- This results in a noticeable slowdown, even before convolution is done. ~45fps just rendering the scene cubemap
 	//	  at 512x512 resolution per face
@@ -934,69 +942,23 @@ void Game::Draw(float deltaTime, float totalTime)
 	//	probe->Draw(device, context, entities, directionalLights, pointLights, sky, iblBRDFLookupTexture);
 	//}
 
-	// Frame START
-	// - These things should happen ONCE PER FRAME
-	// - At the beginning of Game::Draw() before drawing *anything*
-	{
-		// Clear the back buffer (erases what's on the screen)
-		const float bgColor[4] = { 0.4f, 0.6f, 0.75f, 1.0f }; // Cornflower Blue
-		context->ClearRenderTargetView(backBufferRTV.Get(), bgColor);
+	//Microsoft::WRL::ComPtr<ID3D11RasterizerState> rsState;
+	//D3D11_RASTERIZER_DESC rsDesc = {};
+	//rsDesc.CullMode = D3D11_CULL_FRONT;
+	//rsDesc.FrontCounterClockwise = FALSE;
+	//rsDesc.FillMode = D3D11_FILL_SOLID;
+	//device->CreateRasterizerState(&rsDesc, rsState.GetAddressOf());
+	//context->RSSetState(rsState.Get());
 
-		// Clear the depth buffer (resets per-pixel occlusion information)
-		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	}
+	m_renderer->FrameStart();
 
-	// Draw all stored Entities - This REALLY should be done by a Renderer class on a rendering thread by material ID
-	for (std::shared_ptr<Entity> entity : entities) {
-		std::shared_ptr<SimplePixelShader> pixelShader = entity->GetMaterial()->GetPixelShader();
+	// Combine lights into one vector
+	std::vector<BasicLight> allLights = std::vector<BasicLight>(directionalLights);
+	allLights.insert(allLights.end(), pointLights.begin(), pointLights.end());
 
-		// Set Light Data
-		int directionalLightCount = (int)directionalLights.size();
-		int pointLightCount = (int)pointLights.size();
-		// Directionals
-		if (pixelShader->HasVariable("c_directionalLights") && directionalLightCount > 0)
-			pixelShader->SetData("c_directionalLights", &directionalLights[0], sizeof(BasicLight) * directionalLightCount);
-		if (pixelShader->HasVariable("c_directionalLightCount"))
-			pixelShader->SetInt("c_directionalLightCount", directionalLightCount);
-		// Points
-		if (pixelShader->HasVariable("c_pointLights") && pointLightCount > 1)
-			pixelShader->SetData("c_pointLights", &pointLights[0], sizeof(BasicLight) * pointLightCount);
-		if (pixelShader->HasVariable("c_pointLightCount"))
-			pixelShader->SetInt("c_pointLightCount", pointLightCount);
+	m_renderer->Render(entities, allLights, camera, sky);
 
-		// Set IBL Maps
-		if (pixelShader->HasShaderResourceView("IrradianceMap"))
-			pixelShader->SetShaderResourceView("IrradianceMap", sky->GetEnvironmentMap());
-		if (pixelShader->HasShaderResourceView("ReflectionMap"))
-			pixelShader->SetShaderResourceView("ReflectionMap", sky->GetReflectanceMap());
-		if (pixelShader->HasShaderResourceView("BRDFIntegrationMap"))
-			pixelShader->SetShaderResourceView("BRDFIntegrationMap", iblBRDFLookupTexture);
+	m_renderer->PostProcess(camera);
 
-		// Draw Entity
-		entity->Draw(context, camera);
-	}
-
-	// Draw Sky after all Entities
-	sky->Draw(context, camera);
-
-	// Frame END
-	// - These should happen exactly ONCE PER FRAME
-	// - At the very end of the frame (after drawing *everything*)
-	{
-		// Draw ImGUI interface LAST
-		ImGui::Render();
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-		// Present the back buffer to the user
-		//  - Puts the results of what we've drawn onto the window
-		//  - Without this, the user never sees anything
-		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
-		swapChain->Present(
-			vsyncNecessary ? 1 : 0,
-			vsyncNecessary ? 0 : DXGI_PRESENT_ALLOW_TEARING
-		);
-
-		// Must re-bind buffers after presenting, as they become unbound
-		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
-	}
+	m_renderer->FrameEnd(vsync || !deviceSupportsTearing || isFullscreen);
 }
