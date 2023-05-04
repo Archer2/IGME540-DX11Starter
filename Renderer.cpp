@@ -136,11 +136,19 @@ void Renderer::PreResize()
 	m_backBufferRTV.Reset();
 	m_depthBufferDSV.Reset();
 
+	// Clear MRT Views
 	for (Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv : m_mrtRTVs) {
 		rtv.Reset();
 	}
-
 	for (Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& srv : m_mrtSRVs) {
+		srv.Reset();
+	}
+
+	// Clear post process Views
+	for (Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>& uav : m_ppUAVs) {
+		uav.Reset();
+	}
+	for (Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& srv : m_ppSRVs) {
 		srv.Reset();
 	}
 }
@@ -180,8 +188,6 @@ void Renderer::PostResize(unsigned int a_windowWidth, unsigned int a_windowHeigh
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> tex; // Staging texture for View creation
-
 	// Loop through all RenderTarget versions and create them
 	for (int i = 0; i < RenderTarget::RT_COUNT; i++) {
 		// Set texture formats. Needed here since Depth target needs to be a single higher-precision float
@@ -194,6 +200,7 @@ void Renderer::PostResize(unsigned int a_windowWidth, unsigned int a_windowHeigh
 		rtvDesc.Format = rtDesc.Format;
 		srvDesc.Format = rtDesc.Format;
 
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> tex; // Declare within loop to prevent memory leaks
 		m_device->CreateTexture2D(&rtDesc, nullptr, tex.GetAddressOf());
 
 		m_device->CreateRenderTargetView(tex.Get(), &rtvDesc, m_mrtRTVs[i].GetAddressOf());
@@ -212,6 +219,7 @@ void Renderer::PostResize(unsigned int a_windowWidth, unsigned int a_windowHeigh
 
 	// Create all required PostProcessTargets (textures and their UAVs / SRVs)
 	for (int i = 0; i < PostProcessTarget::PPT_COUNT; i++) {
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> tex;
 		m_device->CreateTexture2D(&rtDesc, nullptr, tex.GetAddressOf());
 
 		m_device->CreateUnorderedAccessView(tex.Get(), &uavDesc, m_ppUAVs[i].GetAddressOf());

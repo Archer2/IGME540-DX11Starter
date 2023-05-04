@@ -98,8 +98,8 @@ void Game::Init()
 		depthBufferDSV, iblBRDFLookupTexture, fullscreenTriangleVertexShader, windowWidth, windowHeight);
 
 	// Test a Reflection Probe
-	std::shared_ptr<ReflectionProbe> probe = std::make_shared<ReflectionProbe>(100.f, Vector3(0.f, 0.f, -10.f), vertexShader, fullscreenTriangleVertexShader, pixelShader, envPrefilterPixelShader, device);
-	reflectionProbes.push_back(probe);
+	//std::shared_ptr<ReflectionProbe> probe = std::make_shared<ReflectionProbe>(100.f, Vector3(0.f, 0.f, -10.f), vertexShader, fullscreenTriangleVertexShader, pixelShader, envPrefilterPixelShader, device);
+	//reflectionProbes.push_back(probe);
 	
 	// Create Camera some units behind the origin
 	Transform cameraTransform = Transform::ZeroTransform;
