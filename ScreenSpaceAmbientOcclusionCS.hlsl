@@ -5,6 +5,11 @@
 * some things that hint at that
 */
 
+// Using the Random Texture still has minor artifacts after blur, they are just invisible when zoomed out.
+// Toggling this on replaces the Random texture with the simple GPU random calculation from Raytracing 
+// exercises. This still produces a noisy result and requires a blur, but the blur result is much smoother
+#define USE_RANDOM_TEXTURE 1
+
 // All external data needed for this shader
 cbuffer SSAOData : register(b0)
 {
@@ -60,6 +65,22 @@ float2 UVFromViewSpacePosition(float3 a_viewPos)
 	return uv;
 }
 
+// Calculates a fast, random(ish) number from 0-1. Input is a float2, can be used with UV input
+float Rand(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453); // Magic numbers are "random" to provide "random" output - indistinguishable for humans
+}
+float2 Rand2(float2 uv)
+{
+	float x = Rand(uv);
+	float y = sqrt(1.f - x * x);
+	return float2(x, y);
+}
+float3 Rand3(float2 uv)
+{
+	return float3(Rand2(uv), Rand(uv.yx));
+}
+
 // Compute function to replicate SSAO calculation using Compute Shaders rather than
 // a rasterization of a single triangle
 //	- Runs in threadgroups of 32. A strong saturation of GPU cores is desired, and the maximum
@@ -82,8 +103,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	float3 pixelPosViewSpace = ViewSpaceFromDepth(pixelDepth, uv);
 
+#if USE_RANDOM_TEXTURE
 	// Assumes random texture holds normalized Vector3s
 	float3 randomDir = Random.SampleLevel(BasicSampler, uv * c_randomSampleScreenScale, 0).xyz;
+#else
+	float3 randomDir = Rand3(float2(DTid.xy) / float2(DTid.yx + 1));
+#endif
 
 	float3 normal = SceneNormals[DTid.xy].xyz * 2.f - 1.f; // Unpack Vector
 	normal = normalize(mul((float3x3)c_viewMatrix, normal)); // Properly rotate normal
@@ -94,7 +119,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	float totalAO = 0.f;
 	for (int i = 0; i < c_samples; i++) {
-		float3 samplePosView = pixelPosViewSpace + mul(c_offsets[i].xyz, TBN) * c_radius;
+		float3 samplePosView = pixelPosViewSpace + mul(c_offsets[i].xyz, TBN) * c_radius; // Trying to do simple GPU random values looks quite bad
 		float2 sampleUV = UVFromViewSpacePosition(samplePosView);
 
 		float sampleDepth = SceneDepths.SampleLevel(ClampSampler, sampleUV, 0).r;
