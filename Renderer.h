@@ -27,15 +27,27 @@ class Renderer
 {
 public:
 
+	// Enum dictating possible Render Target output types. This is used for targets of render
+	// passes invoked with a Draw Call, not compute passes. Used for compile-time naming and organizing
+	// of multiple targets
 	enum RenderTarget {
 		RT_SCENE_COLOR = 0,
 		RT_SCENE_AMBIENT,
 		RT_SCENE_NORMAL,
 		RT_SCENE_DEPTH,
-		RT_POST_PROCESS_ZERO, // Used to swap between multiple Post-Process effects. If only 1, use just this
-		RT_POST_PROCESS_ONE, // Used to swap between multiple Post-Process effects (as is needed with SSAO)
 
 		RT_COUNT // Always last, internal integer representation marks the number of RTs AT COMPILE TIME!
+	};
+
+	// Performs same function as RenderTarget enum, but is specifically used for post process 
+	// targets for compute shaders. They have separate requirements for binding and UAVs instead of RTVs
+	//	- Having this whole process for 2 textures is a bit ridiculous, but when that turns into 4
+	//	  Views its a bit nicer. It is also robust enough to support future additions
+	enum PostProcessTarget {
+		PPT_PASS_ZERO = 0, // Generic for any post-process type. If only 1 target is needed for the pass, this one should be used
+		PPT_PASS_ONE, // Generic, secondary target for multi-step post-processes. Each pass can swap between writing and reading from each texture
+
+		PPT_COUNT // Always last, internal integer representation marks the number of RTs AT COMPILE TIME!
 	};
 
 	Renderer(
@@ -68,7 +80,7 @@ public:
 	
 	void PostProcess(std::shared_ptr<Camera> a_camera);
 
-	void DisplayRenderTargets(std::vector<RenderTarget> a_rtIndices);
+	void DisplayRenderTextures(std::vector<RenderTarget> a_rtIndices, std::vector<PostProcessTarget> a_pptIndices);
 
 protected:
 	// Some or all of these do not need duplicate references stored here. They should be
@@ -85,7 +97,7 @@ protected:
 	unsigned int m_windowWidth;
 	unsigned int m_windowHeight;
 
-	// How to store RTVs and SRVs for the post-process render targets?
+	// How to store RTVs and SRVs for the MRT render targets?
 	//	- Could have a separate member for each one, but that's unscalable, inflexible, 
 	//	  and annoying
 	//	- Could have an array or list, but then how to tell which is which? Build it in one order and
@@ -94,17 +106,28 @@ protected:
 	//		  and re-ordering at the caller's whim - any combination can be set for rendering or reading
 	//			- Excellent idea Professor!
 	//	- Could have a map to "name" the target, but that is still inflexible - does not support a
-	//	  varying number of post-processes with different needs
+	//	  varying number of post-processes with different render output needs
 	//		- RTVs must be set in the same order as the SRVs in the PP shader, and a name does not
 	//		  help find that order
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_mrtRTVs[RenderTarget::RT_COUNT];
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_mrtSRVs[RenderTarget::RT_COUNT];
 
+	// Its possible these should just stick as UAVs
+	//	- UAVs must be able to be bound as read-only resources 
+	//	- Likewise, mrtSRVs may be able to be replaced by UAVs. Research must be done to see if UAVs can be bound
+	//	  to t registers. Only issue is that mrt results should NEVER be overwritten during a frame, and a UAV could
+	//	  allow them to be bound accidentally as a writable texture
+	//	- The SRVs must exist as-is to be bound to the final pixel shader for drawing to the back buffer. This could
+	//	  be eliminated by having that as a compute pass or by manually passing UAVs to that PS (not supported by
+	//	  SimpleShader, but still possible)
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> m_ppUAVs[PostProcessTarget::PPT_COUNT];
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_ppSRVs[PostProcessTarget::PPT_COUNT];
+
 	// Shaders and resources required for specifically SSAO
 	std::shared_ptr<SimpleVertexShader> m_postProcessVS;
-	std::shared_ptr<SimplePixelShader> m_ssaoCorePS;
-	std::shared_ptr<SimplePixelShader> m_ssaoBlurPS;
-	std::shared_ptr<SimplePixelShader> m_ssaoCombinePS;
+	std::shared_ptr<SimpleComputeShader> m_ssaoCoreCS;
+	std::shared_ptr<SimpleComputeShader> m_ssaoBlurCS;
+	std::shared_ptr<SimplePixelShader> m_ssaoCombinePS; // Remains a pixel shader to Draw to Back Buffer
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_ssaoRandomOffsets;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_standardSampler;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_clampSampler;

@@ -45,8 +45,8 @@ Renderer::Renderer(
 	PostResize(m_windowWidth, m_windowHeight, m_backBufferRTV, m_depthBufferDSV);
 
 	// Create SSAO-related resources
-	m_ssaoCorePS = std::make_shared<SimplePixelShader>(m_device, m_context, FixPath(L"ScreenSpaceAmbientOcclusionPS.cso").c_str());
-	m_ssaoBlurPS = std::make_shared<SimplePixelShader>(m_device, m_context, FixPath(L"FourByFourBlurPS.cso").c_str());
+	m_ssaoCoreCS = std::make_shared<SimpleComputeShader>(m_device, m_context, FixPath(L"ScreenSpaceAmbientOcclusionCS.cso").c_str());
+	m_ssaoBlurCS = std::make_shared<SimpleComputeShader>(m_device, m_context, FixPath(L"FiveByFiveBlurCS.cso").c_str());
 	m_ssaoCombinePS = std::make_shared<SimplePixelShader>(m_device, m_context, FixPath(L"SSAOCombinePS.cso").c_str());
 
 	const int offsetTextureSize = 4, totalPixels = offsetTextureSize * offsetTextureSize;
@@ -180,6 +180,8 @@ void Renderer::PostResize(unsigned int a_windowWidth, unsigned int a_windowHeigh
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> tex; // Staging texture for View creation
+
 	// Loop through all RenderTarget versions and create them
 	for (int i = 0; i < RenderTarget::RT_COUNT; i++) {
 		// Set texture formats. Needed here since Depth target needs to be a single higher-precision float
@@ -192,11 +194,28 @@ void Renderer::PostResize(unsigned int a_windowWidth, unsigned int a_windowHeigh
 		rtvDesc.Format = rtDesc.Format;
 		srvDesc.Format = rtDesc.Format;
 
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> tex;
 		m_device->CreateTexture2D(&rtDesc, nullptr, tex.GetAddressOf());
 
 		m_device->CreateRenderTargetView(tex.Get(), &rtvDesc, m_mrtRTVs[i].GetAddressOf());
 		m_device->CreateShaderResourceView(tex.Get(), &srvDesc, m_mrtSRVs[i].GetAddressOf());
+	}
+
+	// Update TextureDesc and SRVDesc with Compute Pass target values, and create UAVDesc
+	rtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // Basic two targets have standard format
+	rtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	srvDesc.Format = rtDesc.Format;
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = rtDesc.Format;
+	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Texture2D.MipSlice = 0;
+
+	// Create all required PostProcessTargets (textures and their UAVs / SRVs)
+	for (int i = 0; i < PostProcessTarget::PPT_COUNT; i++) {
+		m_device->CreateTexture2D(&rtDesc, nullptr, tex.GetAddressOf());
+
+		m_device->CreateUnorderedAccessView(tex.Get(), &uavDesc, m_ppUAVs[i].GetAddressOf());
+		m_device->CreateShaderResourceView(tex.Get(), &srvDesc, m_ppSRVs[i].GetAddressOf());
 	}
 }
 
@@ -213,15 +232,19 @@ void Renderer::FrameStart()
 	// Clear the depth buffer (resets per-pixel occlusion information)
 	m_context->ClearDepthStencilView(m_depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	// Clear all MRT RTVs
+	// Clear all MRT RTVs and UAVs
 	for (int i = 0; i < 4; i++) {
 		bgColor[i] = 0.f;
 	}
 	for (Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv : m_mrtRTVs) {
 		m_context->ClearRenderTargetView(rtv.Get(), bgColor);
 	}
-	bgColor[0] = 1.f; // Just clear Depth again. Not too much extra cost and I didn't want to do another check
+	for (Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>& uav : m_ppUAVs) { // Probably not necessary, but done regardless
+		m_context->ClearUnorderedAccessViewFloat(uav.Get(), bgColor);
+	}
+	bgColor[0] = 1.f; // Just clear Depth again. Not too much extra cost and I didn't want to do another check in the RTV loop
 	m_context->ClearRenderTargetView(m_mrtRTVs[RenderTarget::RT_SCENE_DEPTH].Get(), bgColor);
+
 
 	// Prep MRTs for SPECIFICALLY SSAO
 	// Loop through all assigned MRTs and get their pointers
@@ -344,83 +367,106 @@ void Renderer::Render(
 //----------------------------------------------------
 void Renderer::PostProcess(std::shared_ptr<Camera> a_camera)
 {
-	DisplayRenderTargets({ RT_SCENE_COLOR, RT_SCENE_AMBIENT, RT_SCENE_NORMAL, RT_SCENE_DEPTH });
+	DisplayRenderTextures({ RT_SCENE_COLOR, RT_SCENE_AMBIENT, RT_SCENE_NORMAL, RT_SCENE_DEPTH }, {});
 
 	// Perform initial SSAO pass
 	{
-		m_postProcessVS->SetShader();
-		m_ssaoCorePS->SetShader();
+		m_ssaoCoreCS->SetShader();
 
 		// Set data for core SSAO pass
 		Matrix4 projMatrix = a_camera->GetProjectionMatrix();
 		Matrix4 invProj;
 		XMStoreFloat4x4(&invProj, XMMatrixInverse(nullptr, XMLoadFloat4x4(&projMatrix)));
 
-		if (m_ssaoCorePS->HasVariable("c_viewMatrix"))
-			m_ssaoCorePS->SetMatrix4x4("c_viewMatrix", a_camera->GetViewMatrix());
-		if (m_ssaoCorePS->HasVariable("c_projectionMatrix"))
-			m_ssaoCorePS->SetMatrix4x4("c_projectionMatrix", projMatrix);
-		if (m_ssaoCorePS->HasVariable("c_inverseProjMatrix"))
-			m_ssaoCorePS->SetMatrix4x4("c_inverseProjMatrix", invProj);
-		if (m_ssaoCorePS->HasVariable("c_offsets"))
-			m_ssaoCorePS->SetData("c_offsets", &m_ssaoOffsets[0], (int)m_ssaoOffsets.size() * sizeof(Vector4));
-		if (m_ssaoCorePS->HasVariable("c_radius"))
-			m_ssaoCorePS->SetFloat("c_radius", 1.f);
-		if (m_ssaoCorePS->HasVariable("c_samples"))
-			m_ssaoCorePS->SetInt("c_samples", (int)m_ssaoOffsets.size()); // CANNOT exceed 64
-		if (m_ssaoCorePS->HasVariable("c_randomSampleScreenScale"))
-			m_ssaoCorePS->SetFloat2("c_randomSampleScreenScale", Vector2((float)m_windowWidth / 4.f, (float)m_windowHeight / 4.f));
+		DirectX::XMINT2 windowDimensions(m_windowWidth, m_windowHeight);
+
+		if (m_ssaoCoreCS->HasVariable("c_viewMatrix"))
+			m_ssaoCoreCS->SetMatrix4x4("c_viewMatrix", a_camera->GetViewMatrix());
+		if (m_ssaoCoreCS->HasVariable("c_projectionMatrix"))
+			m_ssaoCoreCS->SetMatrix4x4("c_projectionMatrix", projMatrix);
+		if (m_ssaoCoreCS->HasVariable("c_inverseProjMatrix"))
+			m_ssaoCoreCS->SetMatrix4x4("c_inverseProjMatrix", invProj);
+		if (m_ssaoCoreCS->HasVariable("c_offsets"))
+			m_ssaoCoreCS->SetData("c_offsets", &m_ssaoOffsets[0], (int)m_ssaoOffsets.size() * sizeof(Vector4));
+		if (m_ssaoCoreCS->HasVariable("c_radius"))
+			m_ssaoCoreCS->SetFloat("c_radius", 1.f);
+		if (m_ssaoCoreCS->HasVariable("c_samples"))
+			m_ssaoCoreCS->SetInt("c_samples", (int)m_ssaoOffsets.size()); // CANNOT exceed 64
+		if (m_ssaoCoreCS->HasVariable("c_windowDimensions"))
+			m_ssaoCoreCS->SetData("c_windowDimensions", &windowDimensions, sizeof(DirectX::XMINT2)); // Why no SetInt2? :(
+		if (m_ssaoCoreCS->HasVariable("c_randomSampleScreenScale"))
+			m_ssaoCoreCS->SetFloat2("c_randomSampleScreenScale", Vector2((float)m_windowWidth / 4.f, (float)m_windowHeight / 4.f));
 			// The random texture has a size of 4 in each dimension - not worth saving in class but may be worth a #define
 
 		// Set Samplers (no need to store these, since they'll remain bound and are functionally the same?
 		//	- Sort of. Anisotropic filtering is not required
-		if (m_ssaoCorePS->HasSamplerState("BasicSampler"))
-			m_ssaoCorePS->SetSamplerState("BasicSampler", m_standardSampler);
-		if (m_ssaoCorePS->HasSamplerState("ClampSampler"))
-			m_ssaoCorePS->SetSamplerState("ClampSampler", m_clampSampler);
+		if (m_ssaoCoreCS->HasSamplerState("BasicSampler"))
+			m_ssaoCoreCS->SetSamplerState("BasicSampler", m_standardSampler);
+		if (m_ssaoCoreCS->HasSamplerState("ClampSampler"))
+			m_ssaoCoreCS->SetSamplerState("ClampSampler", m_clampSampler);
 
 		// Set SRVs
-		if (m_ssaoCorePS->HasShaderResourceView("Random"))
-			m_ssaoCorePS->SetShaderResourceView("Random", m_ssaoRandomOffsets);
-		if (m_ssaoCorePS->HasShaderResourceView("SceneNormals"))
-			m_ssaoCorePS->SetShaderResourceView("SceneNormals", m_mrtSRVs[RT_SCENE_NORMAL]);
-		if (m_ssaoCorePS->HasShaderResourceView("SceneDepths"))
-			m_ssaoCorePS->SetShaderResourceView("SceneDepths", m_mrtSRVs[RT_SCENE_DEPTH]);
+		if (m_ssaoCoreCS->HasShaderResourceView("Random"))
+			m_ssaoCoreCS->SetShaderResourceView("Random", m_ssaoRandomOffsets);
+		if (m_ssaoCoreCS->HasShaderResourceView("SceneNormals"))
+			m_ssaoCoreCS->SetShaderResourceView("SceneNormals", m_mrtSRVs[RT_SCENE_NORMAL]);
+		if (m_ssaoCoreCS->HasShaderResourceView("SceneDepths"))
+			m_ssaoCoreCS->SetShaderResourceView("SceneDepths", m_mrtSRVs[RT_SCENE_DEPTH]);
 
-		m_ssaoCorePS->CopyAllBufferData();
+		// Set output UAV
+		if (m_ssaoCoreCS->HasUnorderedAccessView("SSAO"))
+			m_ssaoCoreCS->SetUnorderedAccessView("SSAO", m_ppUAVs[PPT_PASS_ZERO]);
 
-		// Set Render Target to SSAO result and Draw
-		m_context->OMSetRenderTargets(1, m_mrtRTVs[RT_POST_PROCESS_ZERO].GetAddressOf(), nullptr);
-		m_context->Draw(3, 0);
+		m_ssaoCoreCS->CopyAllBufferData();
+
+		// Dispatch enough groups to fill the window (round up to the next level to handle truncation)
+		const int threadgroupSize = 32;
+		m_ssaoCoreCS->DispatchByGroups((m_windowWidth + threadgroupSize - 1) / threadgroupSize, (m_windowHeight + threadgroupSize - 1) / threadgroupSize, 1);
+
+		// Reset view so it can be used as a resource
+		ID3D11UnorderedAccessView* nullUAV[1] = { };
+		UINT initialCount = 0;
+		m_context->CSSetUnorderedAccessViews(0, 1, nullUAV, &initialCount);
 	}
 
-	DisplayRenderTargets({ RT_POST_PROCESS_ZERO }); // Display in debugger the newly rendered SSAO texture
+	DisplayRenderTextures({},  { PPT_PASS_ZERO }); // Display in debugger the newly rendered SSAO texture
 
 	// Perform Blur pass to reduce pattern
 	{
-		// Set render target first to unbind former one and allow binding as SRV
-		m_context->OMSetRenderTargets(1, m_mrtRTVs[RT_POST_PROCESS_ONE].GetAddressOf(), nullptr);
+		m_ssaoBlurCS->SetShader();
 
-		m_ssaoBlurPS->SetShader();
+		DirectX::XMINT2 windowDimensions(m_windowWidth, m_windowHeight);
 
 		// Set cbuffer data and resources
-		if (m_ssaoBlurPS->HasVariable("c_pixelSize"))
-			m_ssaoBlurPS->SetFloat2("c_pixelSize", Vector2(1.f / (float)m_windowWidth, 1.f / (float)m_windowHeight));
-		if (m_ssaoBlurPS->HasSamplerState("ClampSampler"))
-			m_ssaoBlurPS->SetSamplerState("ClampSampler", m_clampSampler);
-		if (m_ssaoBlurPS->HasShaderResourceView("BlurTarget"))
-			m_ssaoBlurPS->SetShaderResourceView("BlurTarget", m_mrtSRVs[RT_POST_PROCESS_ZERO]);
+		if (m_ssaoBlurCS->HasVariable("c_windowDimensions"))
+			m_ssaoBlurCS->SetData("c_windowDimensions", &windowDimensions, sizeof(DirectX::XMINT2));
+		if (m_ssaoBlurCS->HasSamplerState("ClampSampler"))
+			m_ssaoBlurCS->SetSamplerState("ClampSampler", m_clampSampler);
+		if (m_ssaoBlurCS->HasShaderResourceView("BlurTarget"))
+			m_ssaoBlurCS->SetShaderResourceView("BlurTarget", m_ppSRVs[PPT_PASS_ZERO]);
 
-		m_ssaoBlurPS->CopyAllBufferData();
-		m_context->Draw(3, 0);
+		// Set output texture to next post process UAV
+		if (m_ssaoBlurCS->HasUnorderedAccessView("BlurResult"))
+			m_ssaoBlurCS->SetUnorderedAccessView("BlurResult", m_ppUAVs[PPT_PASS_ONE]);
+
+		// Copy data over and Dispatch
+		m_ssaoBlurCS->CopyAllBufferData();
+		const int threadgroupSize = 32;
+		m_ssaoCoreCS->DispatchByGroups((m_windowWidth + threadgroupSize - 1) / threadgroupSize, (m_windowHeight + threadgroupSize - 1) / threadgroupSize, 1);
+
+		// Reset view so it can be used as a resource
+		ID3D11UnorderedAccessView* nullUAV[1] = { };
+		UINT initialCount = 0;
+		m_context->CSSetUnorderedAccessViews(0, 1, nullUAV, &initialCount);
 	}
 
-	DisplayRenderTargets({ RT_POST_PROCESS_ONE }); // Display blurred result
+	DisplayRenderTextures({},  { PPT_PASS_ONE }); // Display blurred result
 
 	// Perform final combination pass to occlude ambient light
 	{
 		m_context->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), nullptr);
 
+		m_postProcessVS->SetShader();
 		m_ssaoCombinePS->SetShader();
 
 		// Set Resources
@@ -431,7 +477,7 @@ void Renderer::PostProcess(std::shared_ptr<Camera> a_camera)
 		if (m_ssaoCombinePS->HasShaderResourceView("SceneDepths"))
 			m_ssaoCombinePS->SetShaderResourceView("SceneDepths", m_mrtSRVs[RT_SCENE_DEPTH]);
 		if (m_ssaoCombinePS->HasShaderResourceView("SSAO"))
-			m_ssaoCombinePS->SetShaderResourceView("SSAO", m_mrtSRVs[RT_POST_PROCESS_ONE]);
+			m_ssaoCombinePS->SetShaderResourceView("SSAO", m_ppSRVs[PPT_PASS_ONE]);
 		if (m_ssaoCombinePS->HasSamplerState("ClampSampler"))
 			m_ssaoCombinePS->SetSamplerState("ClampSampler", m_clampSampler);
 
@@ -443,18 +489,25 @@ void Renderer::PostProcess(std::shared_ptr<Camera> a_camera)
 	//m_context->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthBufferDSV.Get());
 	ID3D11ShaderResourceView* srvs[128] = {}; // 128 is all of them without guessing a size
 	m_context->PSSetShaderResources(0, 128, srvs);
+	m_context->CSSetShaderResources(0, 128, srvs);
 }
 
 //----------------------------------------------------
 // Draw a set of Render Targets from the MRT setup attached
 // to this Renderer through ImGUI
 //	- Would be nice to display horizontally
+//	- Repeatedly calling the same post-process index
+//	  may overwrite previous calls to display that texture.
+//	  There is no good way around this at this time.
 //----------------------------------------------------
-void Renderer::DisplayRenderTargets(std::vector<RenderTarget> a_rtIndices)
+void Renderer::DisplayRenderTextures(std::vector<RenderTarget> a_rtIndices, std::vector<PostProcessTarget> a_pptIndices)
 {
 	ImGui::Begin("MRT Displays");
 	for (RenderTarget rt : a_rtIndices) {
 		ImGui::Image(m_mrtSRVs[rt].Get(), ImVec2(m_windowWidth / 4.f , m_windowHeight / 4.f));
+	}
+	for (PostProcessTarget ppt : a_pptIndices) {
+		ImGui::Image(m_ppSRVs[ppt].Get(), ImVec2(m_windowWidth / 4.f, m_windowHeight / 4.f));
 	}
 	ImGui::End();
 }

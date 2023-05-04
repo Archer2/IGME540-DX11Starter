@@ -14,8 +14,8 @@ Camera::Camera(Transform a_initialTransform, DirectX::XMINT2 a_aspectRatio)
 	, m_nearClipDistance(0.01f)
 	, m_farClipDistance(1000.f)
 	, m_rotationPitchYaw(0.f, 0.f)
-	, m_movementSpeed(4.f)
-	, m_lookAtSpeed(2.f)
+	, m_movementSpeed(8.f)
+	, m_lookAtSpeed(5.f)
 {
 	m_viewMatrix = CalculateViewMatrix();
 	m_projectionMatrix = CalculateProjectionMatrix();
